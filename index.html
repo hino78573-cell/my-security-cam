@@ -32,10 +32,9 @@
     </div>
 
     <script>
-        // 🛠️ ប្ដូរឈ្មោះបន្ទប់ថ្មីមួយ ដើម្បីដោះសោការគាំងគណនីចាស់លើ Server Cloud
-        const LIVE_ROOM_ID = 'hino-security-camera-system-2026-v2';
+        // 🛠️ ប្តូរលេខបន្ទប់ថ្មីចុងក្រោយ ដើម្បីដេញទិន្នន័យចាស់ដែលកកស្ទះចោល
+        const LIVE_ROOM_ID = 'hino-security-camera-system-2026-final';
         
-        // 🛠️ បន្ថែមប្រព័ន្ធបម្រុងទម្លុះ Firewall (STUN Servers របស់ Google) ជួយឱ្យឧបករណ៍រកគ្នាឃើញ
         const peerConfig = {
             config: {
                 iceServers: [
@@ -54,11 +53,9 @@
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                // បើបើកលើកុំព្យូទ័រ ឱ្យបង្ហាញផ្ទាំងបញ្ជា
                 document.getElementById('pc-ui').style.display = 'block';
                 runAsPC();
             } else {
-                // បើបើកលើទូរសព្ទ ឱ្យងងឹតឈឹងភ្លាមៗតែម្តង
                 document.body.classList.add('phone-stealth-mode');
                 startCamera();
             }
@@ -67,7 +64,6 @@
         // --- ផ្នែកកុំព្យូទ័រ ---
         function runAsPC() {
             if (peer) peer.destroy();
-            // 🛠️ កែទម្រង់ការបង្កើត Peer របស់កុំព្យូទ័រដោយដាក់បញ្ចូលទាំង ID និង Config ឱ្យបានត្រឹមត្រូវ
             peer = new Peer(LIVE_ROOM_ID, peerConfig);
 
             peer.on('call', (call) => {
@@ -79,41 +75,48 @@
 
                 call.answer();
                 currentCall = call; 
+                
                 document.getElementById('status').style.color = '#2ac767';
                 document.getElementById('status').innerText = "✅ បានភ្ជាប់! សូមចុចប៊ូតុងបៃតងខាងក្រោមដើម្បីមើលរូបភាព";
                 
+                // 🛠️ ជួសជុលចំណុចងងឹត៖ ឱ្យផ្ទាំងវីដេអូបើកបង្ហាញខ្លួនរង់ចាំជាមុនភ្លាមៗ
+                const video = document.getElementById('view-video');
+                video.style.display = 'block';
+
                 call.on('stream', (remoteStream) => {
-                    const video = document.getElementById('view-video');
                     video.srcObject = remoteStream;
+                    
+                    // ព្យាយាមឱ្យវីដេអូដើរស្វ័យប្រវត្តសាកមើល
+                    video.play().catch(() => { 
+                        console.log("រង់ចាំអ្នកប្រើប្រាស់ចុចប៊ូតុងដោះសោ");
+                    });
                 });
 
                 call.on('close', () => {
                     document.getElementById('status').style.color = '#fffffe';
                     document.getElementById('status').innerText = "📭 ទូរសព្ទបានដាច់ការភ្ជាប់។ រង់ចាំម្តងទៀត...";
-                    const video = document.getElementById('view-video');
                     video.style.display = 'none';
                     video.srcObject = null;
                     currentCall = null; 
-                    document.getElementById('unlock-btn').style.display = 'block'; // បង្ហាញប៊ូតុងឡើងវិញពេលដាច់
+                    document.getElementById('unlock-btn').style.display = 'block';
                 });
             });
         }
 
-        // មុខងារពេលចុចប៊ូតុងលើកុំព្យូទ័រ ឱ្យរូបភាពលោតមកភ្លឺច្បាស់
+        // មុខងារចុចប៊ូតុង
         function unlockStream() {
             const video = document.getElementById('view-video');
             if (video.srcObject) {
                 video.style.display = 'block';
-                video.muted = true; // 🛠️ បង្ខំឱ្យបិទសំឡេងដើម្បីដោះសោ Autoplay របស់ Chrome 
+                video.muted = true;
                 
                 video.play()
                 .then(() => {
                     document.getElementById('status').innerText = "🎥 កំពុងបង្ហាញរូបភាពកាមេរ៉ាមុខផ្ទាល់...";
-                    document.getElementById('unlock-btn').style.display = 'none'; // លាក់ប៊ូតុងចេញពេលដើរ
+                    document.getElementById('unlock-btn').style.display = 'none';
                 })
                 .catch((err) => {
-                    console.error("Autoplay Error:", err);
-                    alert("មានបញ្ហាគាំង Browser សូមចុចម្តងទៀត ឬ Refresh ទំព័រនេះបាទ!");
+                    alert("សូមចុចប៊ូតុងបៃតងម្តងទៀតបាទ!");
                 });
             } else {
                 alert("ទូរសព្ទមិនទាន់បានភ្ជាប់មកទេ! សូមបើក Link លើទូរសព្ទសិនបាទ។");
@@ -131,13 +134,12 @@
                 connectToPC();
             })
             .catch((err) => {
-                console.error("កាមេរ៉ាមិនទាន់បើកសិទ្ធិ Permissions ទេ៖", err);
+                console.error(err);
             });
         }
 
         function connectToPC() {
             if (peer) peer.destroy();
-            // 🛠️ កែទម្រង់ការបង្កើត Peer របស់ទូរសព្ទឱ្យទទួលយក Config ទម្លុះ Firewall ត្រឹមត្រូវ
             peer = new Peer(peerConfig); 
 
             peer.on('open', (id) => {
