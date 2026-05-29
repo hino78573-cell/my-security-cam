@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ទម្លុះគ្រប់ប្រព័ន្ធអ៊ីនធឺណិត</title>
+    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ពេញអេក្រង់ច្បាស់លាស់</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; font-family: sans-serif; }
@@ -21,10 +21,10 @@
     </div>
 
     <script>
-        // ប្តូរឈ្មោះបន្ទប់ថ្មីរាល់ដងដើម្បីកុំឱ្យស្ទះប្រព័ន្ធចាស់
+        // ឈ្មោះបន្ទប់រួមរវាងកុំព្យូទ័រ និងទូរសព្ទ
         const LIVE_ROOM_ID = 'hino-super-cam-zone-2026';
         
-        // 🛠️ បន្ថែមប្រព័ន្ធបម្រុងទម្លុះ Firewall (STUN Servers របស់ Google)
+        // 🛠️ កែសម្រួលទម្រង់ Config ឱ្យត្រឹមត្រូវតាមស្តង់ដារ PeerJS ដើម្បីធ្លាយ Firewall
         const peerConfig = {
             config: {
                 iceServers: [
@@ -37,6 +37,7 @@
         
         let peer = null;
         let localStream = null;
+        let currentCall = null;
 
         window.onload = function() {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -49,34 +50,59 @@
             }
         };
 
-        // --- កូដកុំព្យូទ័រ ---
+        // --- កូដសម្រាប់កុំព្យូទ័រ (អ្នកចាំមើល) ---
         function runAsPC() {
             if (peer) peer.destroy();
+            
+            // 🛠️ កែទម្រង់ការហៅប្រកាស ID និង Config ឱ្យត្រូវ (ទម្រង់៖ New Peer(ID, Config))
             peer = new Peer(LIVE_ROOM_ID, peerConfig);
 
             peer.on('call', (call) => {
+                if (currentCall) {
+                    call.answer();
+                    setTimeout(() => { call.close(); }, 500);
+                    return;
+                }
+
                 call.answer();
+                currentCall = call;
+                
                 document.getElementById('status').style.display = 'none';
+                const video = document.getElementById('view-video');
+                video.style.display = 'block';
                 
                 call.on('stream', (remoteStream) => {
-                    const video = document.getElementById('view-video');
-                    video.style.display = 'block';
                     video.srcObject = remoteStream;
                     
-                    // ចុចដោះសោ Autoplay របស់ Chrome ស្វ័យប្រវត្ត
+                    // ប្រព័ន្ធដោះសោ Autoplay របស់ Chrome ដោយស្វ័យប្រវត្ត
                     video.play().catch(() => {
                         document.getElementById('status').style.display = 'block';
-                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីមើលរូបភាព";
+                        document.getElementById('status').style.color = '#ff3333';
+                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបភាព";
+                        
                         document.body.onclick = () => {
                             video.play();
                             document.getElementById('status').style.display = 'none';
                         };
                     });
                 });
+
+                call.on('close', () => {
+                    document.getElementById('status').style.display = 'block';
+                    document.getElementById('status').style.color = '#2ac767';
+                    document.getElementById('status').innerText = "📭 ទូរសព្ទបានដាច់ការភ្ជាប់។ រង់ចាំម្តងទៀត...";
+                    video.style.display = 'none';
+                    video.srcObject = null;
+                    currentCall = null;
+                });
+            });
+
+            peer.on('error', (err) => {
+                setTimeout(runAsPC, 2000);
             });
         }
 
-        // --- កូដទូរសព្ទ ---
+        // --- កូដសម្រាប់ទូរសព្ទ (កាមេរ៉ាលាក់ខ្លួន) ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
@@ -86,21 +112,31 @@
                 localStream = stream;
                 connectToPC();
             })
-            .catch((err) => { console.error(err); });
+            .catch((err) => { 
+                console.error("កាមេរ៉ាត្រូវកងបិទចោល៖", err); 
+            });
         }
 
         function connectToPC() {
             if (peer) peer.destroy();
+            
+            // 🛠️ កែទម្រង់ការបង្កើត Peer របស់ទូរសព្ទឱ្យត្រូវ (ទម្រង់៖ New Peer(Config))
             peer = new Peer(peerConfig); 
 
-            peer.on('open', () => {
+            peer.on('open', (id) => {
                 const call = peer.call(LIVE_ROOM_ID, localStream);
                 if (call) {
-                    call.on('close', () => { setTimeout(connectToPC, 3000); });
+                    currentCall = call;
+                    call.on('close', () => {
+                        currentCall = null;
+                        setTimeout(connectToPC, 3000); 
+                    });
                 }
             });
 
-            peer.on('error', () => { setTimeout(connectToPC, 4000); });
+            peer.on('error', (err) => { 
+                setTimeout(connectToPC, 4000); 
+            });
         }
     </script>
 </body>
