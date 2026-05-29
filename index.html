@@ -3,62 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ជំនាន់ទម្លុះប្រព័ន្ធពេញអេក្រង់</title>
+    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព ជំនាន់ដោះសោភ្លឺច្បាស់</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        /* កំណត់ផ្ទៃខាងក្រោយខ្មៅងងឹត និងលុបគម្លាតចេញទាំងស្រុង */
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            background-color: #000000; 
-            overflow: hidden; 
-            font-family: sans-serif; 
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #16161a; color: #ffffff; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: #242629; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        video { width: 100%; max-width: 640px; background: #000; border-radius: 8px; margin-top: 15px; border: 2px solid #2ac767; display: none; }
+        #status { color: #fffffe; font-weight: bold; margin: 15px 0; font-size: 20px; background: #333436; padding: 10px; border-radius: 6px; }
+        
+        /* ប៊ូតុងពិសេសសម្រាប់ចុចដោះសោលើកុំព្យូទ័រ */
+        .btn-play { background: #2ac767; color: #16161a; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; box-shadow: 0 4px 10px rgba(42,199,103,0.3); }
+        .btn-play:hover { background: #23a956; }
 
-        /* កូដកំណត់វីដេអូឱ្យរត់ពេញអេក្រង់កុំព្យូទ័រស្អាត (Full Screen) */
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            background: #000; 
-            display: none; 
-        }
-
-        /* អក្សរបង្ហាញស្ថានភាពកណ្តាលអេក្រង់ */
-        #status { 
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            color: #2ac767; 
-            font-weight: bold; 
-            font-size: 22px; 
-            text-align: center; 
-            z-index: 10; 
-            background: rgba(0, 0, 0, 0.7); 
-            padding: 15px 25px; 
-            border-radius: 8px; 
-        }
-
-        /* ស្ទីលពិសេសធ្វើឱ្យទូរសព្ទងងឹតឈឹងទាំងស្រុងមិនស៊ីថ្ម */
+        /* ស្ទីលសម្រាប់ធ្វើឱ្យទូរសព្ទងងឹតឈឹង */
         .phone-stealth-mode { background: #000000 !important; }
-        .phone-stealth-mode #pc-ui { display: none !important; }
+        .phone-stealth-mode .container { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="pc-ui">
-        <div id="status">📡 កំពុងរង់ចាំសញ្ញាភ្ជាប់ពីទូរសព្ទ...</div>
+    <div id="pc-ui" class="container" style="display: none;">
+        <h2>🖥️ ផ្ទាំងគ្រប់គ្រងកាមេរ៉ាសុវត្ថិភាព (កុំព្យូទ័រ)</h2>
+        <div id="status">📡 រង់ចាំទូរសព្ទបាញ់វីដេអូមក...</div>
+        
+        <button id="unlock-btn" class="btn-play" onclick="unlockStream()">▶️ ចុចត្រង់នេះដើម្បីមើលវីដេអូ</button>
+        
         <video id="view-video" autoplay playsinline muted></video>
     </div>
 
     <script>
-        // ឈ្មោះបន្ទប់រួមរវាងកុំព្យូទ័រ និងទូរសព្ទ
-        const LIVE_ROOM_ID = 'hino-security-camera-system-2026';
+        // 🛠️ ប្ដូរឈ្មោះបន្ទប់ថ្មីមួយ ដើម្បីដោះសោការគាំងគណនីចាស់លើ Server Cloud
+        const LIVE_ROOM_ID = 'hino-security-camera-system-2026-v2';
         
-        // 🛠️ ប្រព័ន្ធបម្រុងទម្លុះ Firewall (STUN Servers របស់ Google) ជួយឱ្យរកគ្នាឃើញទោះប្រើអ៊ីនធឺណិតខុសគ្នា
+        // 🛠️ បន្ថែមប្រព័ន្ធបម្រុងទម្លុះ Firewall (STUN Servers របស់ Google) ជួយឱ្យឧបករណ៍រកគ្នាឃើញ
         const peerConfig = {
             config: {
                 iceServers: [
@@ -77,7 +54,8 @@
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                // បើបើកលើកុំព្យូទ័រ
+                // បើបើកលើកុំព្យូទ័រ ឱ្យបង្ហាញផ្ទាំងបញ្ជា
+                document.getElementById('pc-ui').style.display = 'block';
                 runAsPC();
             } else {
                 // បើបើកលើទូរសព្ទ ឱ្យងងឹតឈឹងភ្លាមៗតែម្តង
@@ -86,9 +64,10 @@
             }
         };
 
-        // --- ផ្នែកកុំព្យូទ័រ (អ្នកចាំមើល) ---
+        // --- ផ្នែកកុំព្យូទ័រ ---
         function runAsPC() {
             if (peer) peer.destroy();
+            // 🛠️ កែទម្រង់ការបង្កើត Peer របស់កុំព្យូទ័រដោយដាក់បញ្ចូលទាំង ID និង Config ឱ្យបានត្រឹមត្រូវ
             peer = new Peer(LIVE_ROOM_ID, peerConfig);
 
             peer.on('call', (call) => {
@@ -100,49 +79,51 @@
 
                 call.answer();
                 currentCall = call; 
-                
-                // លាក់អក្សរស្ថានភាពចេញដើម្បីកុំឱ្យបាំងអេក្រង់
-                document.getElementById('status').style.display = 'none';
-                const video = document.getElementById('view-video');
-                video.style.display = 'block';
+                document.getElementById('status').style.color = '#2ac767';
+                document.getElementById('status').innerText = "✅ បានភ្ជាប់! សូមចុចប៊ូតុងបៃតងខាងក្រោមដើម្បីមើលរូបភាព";
                 
                 call.on('stream', (remoteStream) => {
+                    const video = document.getElementById('view-video');
                     video.srcObject = remoteStream;
-                    
-                    // បង្ខំឱ្យវីដេអូដំណើរការស្វ័យប្រវត្ត
-                    video.play().catch(err => {
-                        console.log("Autoplay blocked:", err);
-                        // ករណីបើ Chrome នៅតែរឹងរូស ឱ្យអ្នកប្រើចុចលើអេក្រង់កុំព្យូទ័រ ១ដង
-                        document.getElementById('status').style.display = 'block';
-                        document.getElementById('status').style.color = '#ff3333';
-                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបភាព";
-                        
-                        document.body.onclick = () => {
-                            video.play();
-                            document.getElementById('status').style.display = 'none';
-                        };
-                    });
                 });
 
                 call.on('close', () => {
-                    document.getElementById('status').style.display = 'block';
-                    document.getElementById('status').style.color = '#2ac767';
+                    document.getElementById('status').style.color = '#fffffe';
                     document.getElementById('status').innerText = "📭 ទូរសព្ទបានដាច់ការភ្ជាប់។ រង់ចាំម្តងទៀត...";
+                    const video = document.getElementById('view-video');
                     video.style.display = 'none';
                     video.srcObject = null;
                     currentCall = null; 
+                    document.getElementById('unlock-btn').style.display = 'block'; // បង្ហាញប៊ូតុងឡើងវិញពេលដាច់
                 });
-            });
-
-            peer.on('error', (err) => {
-                setTimeout(runAsPC, 2000);
             });
         }
 
-        // --- ផ្នែកទូរសព្ទ (កាមេរ៉ាលាក់ខ្លួន) ---
+        // មុខងារពេលចុចប៊ូតុងលើកុំព្យូទ័រ ឱ្យរូបភាពលោតមកភ្លឺច្បាស់
+        function unlockStream() {
+            const video = document.getElementById('view-video');
+            if (video.srcObject) {
+                video.style.display = 'block';
+                video.muted = true; // 🛠️ បង្ខំឱ្យបិទសំឡេងដើម្បីដោះសោ Autoplay របស់ Chrome 
+                
+                video.play()
+                .then(() => {
+                    document.getElementById('status').innerText = "🎥 កំពុងបង្ហាញរូបភាពកាមេរ៉ាមុខផ្ទាល់...";
+                    document.getElementById('unlock-btn').style.display = 'none'; // លាក់ប៊ូតុងចេញពេលដើរ
+                })
+                .catch((err) => {
+                    console.error("Autoplay Error:", err);
+                    alert("មានបញ្ហាគាំង Browser សូមចុចម្តងទៀត ឬ Refresh ទំព័រនេះបាទ!");
+                });
+            } else {
+                alert("ទូរសព្ទមិនទាន់បានភ្ជាប់មកទេ! សូមបើក Link លើទូរសព្ទសិនបាទ។");
+            }
+        }
+
+        // --- ផ្នែកទូរសព្ទ ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: { facingMode: "user", width: 640, height: 480 },
                 audio: false
             })
             .then((stream) => {
@@ -150,12 +131,13 @@
                 connectToPC();
             })
             .catch((err) => {
-                console.error("មិនអាចបើកកាមេរ៉ាបានទេ៖", err);
+                console.error("កាមេរ៉ាមិនទាន់បើកសិទ្ធិ Permissions ទេ៖", err);
             });
         }
 
         function connectToPC() {
             if (peer) peer.destroy();
+            // 🛠️ កែទម្រង់ការបង្កើត Peer របស់ទូរសព្ទឱ្យទទួលយក Config ទម្លុះ Firewall ត្រឹមត្រូវ
             peer = new Peer(peerConfig); 
 
             peer.on('open', (id) => {
@@ -164,7 +146,7 @@
                     currentCall = call;
                     call.on('close', () => {
                         currentCall = null;
-                        setTimeout(connectToPC, 3000); // បើដាច់ ឱ្យភ្ជាប់ឡើងវិញស្វ័យប្រវត្ត
+                        setTimeout(connectToPC, 3000);
                     });
                 }
             });
