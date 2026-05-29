@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព សកល (Android & iOS)</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #fff; text-align: center; margin: 0; padding: 20px; transition: background 0.3s; }
+        .container { max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        video { width: 100%; max-width: 640px; background: #000; border-radius: 8px; margin-top: 15px; border: 2px solid #555; }
+        #status { color: #ffc107; font-weight: bold; margin: 15px 0; font-size: 20px; }
+        .device-badge { display: inline-block; padding: 6px 12px; background: #444; border-radius: 20px; font-size: 14px; margin-bottom: 10px; color: #aaa; }
+        
+        .stealth-mode { background: #000 !important; }
+        .stealth-mode .container { opacity: 0.005 !important; }
+    </style>
+</head>
+<body>
+
+    <h2 id="main-title">ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព (Android & iOS)</h2>
+    
+    <div class="container" id="main-container">
+        <div id="device-type" class="device-badge">កំពុងពិនិត្យឧបករណ៍...</div>
+        <div id="status">កំពុងចាប់ផ្តើមប្រព័ន្ធ...</div>
+        <p id="hint" style="color: #bbb; display: none;">💡 ចុចលើអេក្រង់ត្រង់ណាក៏បាន ១ដង ដើម្បីលាក់អេក្រង់ឱ្យងងឹតឈឹង! (ចុចម្តងទៀតដើម្បីបើកវិញ)</p>
+        
+        <video id="view-video" autoplay playsinline muted style="display: none;"></video>
+    </div>
+
+    <script>
+        const PC_PEER_ID = 'global-system-pc-viewer-2026';
+        
+        let peer = null;
+        let currentCall = null; 
+        let wakeLock = null;
+        let localStream = null;
+        let isStealth = false;
+
+        window.onload = function() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            if (!isMobile) {
+                document.getElementById('device-type').innerText = "💻 ឧបករណ៍៖ កុំព្យូទ័រ (អេក្រង់មើល)";
+                runAsPC();
+            } else {
+                document.getElementById('device-type').innerText = "📱 ឧបករណ៍៖ ទូរសព្ទ (Android/iOS)";
+                
+                // មុខងារចុចដើម្បីលាក់អេក្រង់ខ្មៅ
+                document.body.onclick = function() {
+                    toggleStealthMode();
+                };
+                
+                startAndroidCamera();
+            }
+        };
+
+        // --- កូដសម្រាប់ កុំព្យូទ័រ ---
+        function runAsPC() {
+            document.getElementById('status').innerText = "📡 រង់ចាំទូរសព្ទភ្ជាប់មកជាស្វ័យប្រវត្ត...";
+            if (peer) peer.destroy();
+            
+            peer = new Peer(PC_PEER_ID);
+
+            peer.on('call', (call) => {
+                if (currentCall) {
+                    call.answer();
+                    setTimeout(() => { call.close(); }, 500);
+                    return;
+                }
+
+                call.answer();
+                currentCall = call; 
+                document.getElementById('status').innerText = "✅ ភ្ជាប់ជោគជ័យ! កំពុងបង្ហាញរូបភាព...";
+                
+                call.on('stream', (remoteStream) => {
+                    const video = document.getElementById('view-video');
+                    video.style.display = 'block';
+                    video.srcObject = remoteStream;
+                });
+
+                call.on('close', () => {
+                    document.getElementById('status').innerText = "📭 ទូរសព្ទបានចាកចេញ។ រង់ចាំឧបករណ៍បន្ទាប់...";
+                    document.getElementById('view-video').style.display = 'none';
+                    currentCall = null; 
+                });
+            });
+
+            peer.on('error', (err) => {
+                setTimeout(runAsPC, 2000);
+            });
+        }
+
+        // --- កូដសម្រាប់ ទូរសព្ទ Android ---
+        function startAndroidCamera() {
+            document.getElementById('status').innerText = "🎥 កំពុងសុំសិទ្ធិបើកកាមេរ៉ាក្រោយ...";
+            
+            // កំណត់កូដកាមេរ៉ាឱ្យត្រូវស្តង់ដារ Android និង iOS
+            const constraints = {
+                video: {
+                    facingMode: { ideal: "environment" }, // ប្រើកាមេរ៉ាក្រោយ
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 10 }
+                },
+                audio: false
+            };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
+            .then((stream) => {
+                localStream = stream;
+                const video = document.getElementById('view-video');
+                video.style.display = 'block';
+                video.srcObject = stream;
+
+                connectToPC();
+            })
+            .catch((err) => {
+                document.getElementById('status').innerText = "⚠️ Android បដិសេធកាមេរ៉ា! សូមចូលទៅ Settings > Apps > Chrome > Permissions រួចបើក Camera បាទ។";
+                console.error(err);
+            });
+        }
+
+        function connectToPC() {
+            if (peer) peer.destroy();
+            peer = new Peer(); 
+
+            peer.on('open', (id) => {
+                document.getElementById('status').innerText = "🔗 កំពុងបាញ់វីដេអូទៅកុំព្យូទ័រ...";
+                
+                const call = peer.call(PC_PEER_ID, localStream);
+                
+                if (call) {
+                    document.getElementById('hint').style.display = 'block';
+                    
+                    call.on('close', () => {
+                        document.getElementById('status').innerText = "🔄 ដាច់ការភ្ជាប់! កំពុងភ្ជាប់ឡើងវិញ...";
+                        if(isStealth) toggleStealthMode(); 
+                        setTimeout(connectToPC, 4000);
+                    });
+                }
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('status').innerText = "🔄 កុំព្យូទ័រមិនទាន់បើក! កំពុងរង់ចាំភ្ជាប់ឡើងវិញ...";
+                setTimeout(connectToPC, 4000);
+            });
+        }
+
+        // --- មុខងារលាក់អេក្រង់ងងឹត (Stealth Mode) ---
+        async function toggleStealthMode() {
+            if (document.getElementById('status').innerText.includes("បាញ់វីដេអូ") || document.getElementById('status').innerText.includes("ជោគជ័យ")) {
+                isStealth = !isStealth;
+                const title = document.getElementById('main-title');
+
+                if (isStealth) {
+                    if ('wakeLock' in navigator) {
+                        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+                    }
+                    document.body.classList.add('stealth-mode');
+                    title.style.display = 'none';
+                } else {
+                    if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
+                    document.body.classList.remove('stealth-mode');
+                    title.style.display = 'block';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
