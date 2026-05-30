@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 ប្រព័ន្ធគ្រប់គ្រងកាមេរ៉ា (Smart Toggle & Auto-Clean)</title>
+    <title>HELLO! :)</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         html, body { 
@@ -229,7 +229,7 @@
 
     <div id="pc-ui">
         <div class="camera-sidebar">
-            <div class="sidebar-title">📹 កាមេរ៉ាអនឡាញ</div>
+            <div class="sidebar-title">camera📷</div>
             <div id="dynamic-btn-container"></div>
         </div>
 
@@ -237,7 +237,7 @@
             <canvas id="tv-static-canvas"></canvas>
             <div class="tv-overlay"></div>
             
-            <div id="status">📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...</div>
+            <div id="status"></div>
             
             <video id="view-video" autoplay playsinline muted></video>
         </div>
@@ -461,7 +461,7 @@
                     videoElement.srcObject = null;
                     statusElement.style.display = 'block';
                     statusElement.style.color = '#ffb86c';
-                    statusElement.innerText = `⏸️ បានផ្អាកការមើលកាមេរ៉ា #${camId}`;
+                    statusElement.innerText = ` #${camId}`;
                 } else {
                     isVideoPlaying = true;
                     clickedBtn.classList.remove('paused');
@@ -510,7 +510,7 @@
                         videoElement.srcObject = null;
                         statusElement.style.display = 'block';
                         statusElement.style.color = '#ff5555';
-                        statusElement.innerText = `⚠️ SIGNAL LOST៖ កាមេរ៉ា #${camId} បានដាច់ការទាក់ទង។`;
+                        statusElement.innerText = ``;
                     }
                     delete cameraRegistry[camId];
                 }
