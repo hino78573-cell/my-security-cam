@@ -3,57 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 ប្រព័ន្ធសុវត្ថិភាពកាមេរ៉ា និងលេខកូដសម្ងាត់</title>
+    <title>🔐 ប្រព័ន្ធគ្រប់គ្រងកាមេរ៉ា (TV Noise Ultimate)</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        /* កំណត់ផ្ទៃខាងក្រោយខ្មៅងងឹតទាំងស្រុង */
         html, body { 
             margin: 0; 
             padding: 0; 
             width: 100%; 
             height: 100%; 
-            background-color: #1e1e2e; 
+            background-color: #0d0e15; 
             overflow: hidden; 
             font-family: 'Khmer OS Battambang', sans-serif; 
         }
 
-        /* 🖥️ ផ្ទាំងបញ្ជាកុំព្យូទ័រ៖ រៀបចំឱ្យវីដេអូស្ថិតនៅចំកណ្តាលអេក្រង់ (លាក់ទុកមុនពេលដោះសោ) */
+        /* 🖥️ ផ្ទាំងបញ្ជាកុំព្យូទ័រ */
         #pc-ui {
             width: 100%;
             height: 100%;
-            display: none; /* នឹងបង្ហាញក្រោយពេលវាយកូដត្រូវ */
-            justify-content: center;
-            align-items: center;
-            background-color: #000000;
+            display: none; 
+            background-color: #0d0e15;
+            position: relative;
         }
 
-        /* 📱 កូដកំណត់ឱ្យវីដេអូចេញទម្រង់ទូរសព្ទ ប៉ុន្តែពង្រីកកម្ពស់ពេញអេក្រង់កុំព្យូទ័រ */
+        /* 🎛️ របារបញ្ជីប៊ូតុងកាមេរ៉ា (ខាងឆ្វេងអេក្រង់) */
+        .camera-sidebar {
+            width: 260px;
+            background: #11121a;
+            border-right: 2px solid #1f202e;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+
+        .sidebar-title {
+            color: #8be9fd;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #1f202e;
+            padding-bottom: 10px;
+        }
+
+        #dynamic-btn-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 🟢 ស្ទីលប៊ូតុងកាមេរ៉ា (មានស៊ុមពណ៌បៃតងជុំវិញ) */
+        .cam-btn {
+            background: rgba(80, 250, 123, 0.03);
+            color: #50fa7b;
+            border: 2px solid #50fa7b; 
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(80, 250, 123, 0.15); 
+            transition: all 0.3s ease-in-out;
+            animation: popIn 0.4s ease-out; 
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .cam-btn:hover {
+            background: rgba(80, 250, 123, 0.1);
+            box-shadow: 0 0 15px rgba(80, 250, 123, 0.3);
+        }
+
+        .cam-btn.active {
+            background: #50fa7b !important;
+            color: #11121a !important;
+            box-shadow: 0 0 20px rgba(80, 250, 123, 0.5);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #50fa7b;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #50fa7b;
+        }
+
+        /* 📺 តំបន់បង្ហាញវីដេអូ */
+        .video-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 📺 អេក្រង់ទូរទស្សន៍ដាច់ប៉ុស្តិ៍ពិតៗ (Canvas) */
+        #tv-static-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* ខ្សែឆ្នូតៗរត់កាត់ពីលើអេក្រង់ទូរទស្សន៍ចាស់ */
+        .tv-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
         video { 
             height: 100vh;      
             width: auto;        
             object-fit: contain; 
             background: #000; 
             display: none; 
+            position: relative;
+            z-index: 5; 
         }
 
-        /* អក្សរបង្ហាញស្ថានភាពកណ្តាលអេក្រង់ */
+        /* ផ្ទាំងអក្សរស្ថានភាព */
         #status { 
             position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            color: #2ac767; 
+            color: #ff5555; 
             font-weight: bold; 
-            font-size: 22px; 
+            font-size: 18px; 
             text-align: center; 
             z-index: 10; 
-            background: rgba(0, 0, 0, 0.8); 
+            background: rgba(0, 0, 0, 0.85); 
             padding: 15px 25px; 
             border-radius: 8px; 
             pointer-events: none;
+            border: 1px solid rgba(255, 85, 85, 0.3);
+            box-shadow: 0 0 15px rgba(255, 85, 85, 0.2);
         }
 
-        /* ------------------ ផ្នែករចនាប្រអប់សុវត្ថិភាព PIN ------------------ */
+        /* ------------------ ផ្ទាំងចាក់សោរ PIN ------------------ */
         #login-container {
             position: absolute;
             width: 100%;
@@ -78,86 +178,28 @@
             color: white;
         }
 
-        .icon-lock {
-            font-size: 50px;
-            margin-bottom: 10px;
-            color: #ffb86c;
-            display: inline-block;
-            transition: transform 0.3s;
-        }
-
+        .icon-lock { font-size: 50px; margin-bottom: 10px; color: #ffb86c; display: inline-block; }
         h2 { margin: 10px 0 20px 0; font-size: 22px; font-weight: 500; }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 20px;
-        }
+        .input-group { position: relative; margin-bottom: 20px; }
 
         input[type="password"] {
-            width: 100%;
-            padding: 15px;
-            padding-left: 20px;
-            box-sizing: border-box;
-            background: #282a36;
-            border: 2px solid #44475a;
-            border-radius: 12px;
-            color: white;
-            font-size: 20px;
-            letter-spacing: 5px;
-            text-align: center;
-            outline: none;
-            transition: 0.3s;
+            width: 100%; padding: 15px; box-sizing: border-box; background: #282a36;
+            border: 2px solid #44475a; border-radius: 12px; color: white;
+            font-size: 20px; letter-spacing: 5px; text-align: center; outline: none;
         }
-
-        input[type="password"]:focus {
-            border-color: #8be9fd;
-            box-shadow: 0 0 10px rgba(139, 233, 253, 0.3);
-        }
+        input[type="password"]:focus { border-color: #8be9fd; }
 
         #login-btn {
-            width: 100%;
-            padding: 15px;
-            background: #50fa7b;
-            color: #282a36;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(80, 250, 123, 0.3);
-            transition: 0.3s;
+            width: 100%; padding: 15px; background: #50fa7b; color: #282a36;
+            border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer;
         }
 
-        #login-btn:hover {
-            background: #40c963;
-            transform: translateY(-2px);
-        }
+        #status-text { margin-top: 20px; font-size: 16px; font-weight: bold; color: #ffb86c; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .error-shake { animation: shake 0.2s ease-in-out 2; border-color: #ff5555 !important; }
+        .fade-out { opacity: 0; transform: scale(0.9); transition: 0.6s ease-out; }
 
-        #status-text {
-            margin-top: 20px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffb86c;
-            min-height: 24px;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
-        }
-        .error-shake {
-            animation: shake 0.2s ease-in-out 2;
-            border-color: #ff5555 !important;
-        }
-
-        .fade-out {
-            opacity: 0;
-            transform: scale(0.9);
-            transition: 0.6s ease-out;
-        }
-
-        /* ធ្វើឱ្យទូរសព្ទងងឹតឈឹងសន្សំថ្ម */
+        /* 📱 ស្ទីលសម្រាប់ទូរសព្ទឱ្យងងឹតឈឹងភ្លាមៗ */
         .phone-stealth-mode { background: #000000 !important; }
         .phone-stealth-mode #pc-ui { display: none !important; }
         .phone-stealth-mode #login-container { display: none !important; }
@@ -168,199 +210,244 @@
     <div id="login-container">
         <div class="login-box" id="login-card">
             <div class="icon-lock" id="lock-icon">🔒</div>
-            <h2 id="title-text">វាយលេខកូដដើម្បីចូល</h2>
-            
+            <h2 id="title-text">វាយលេខកូដដើម្បីចូលមើល</h2>
             <div class="input-group">
                 <input type="password" id="pin-input" placeholder="••••" maxlength="8" onkeypress="checkEnter(event)">
             </div>
-
             <button id="login-btn" onclick="verifyPIN()">ផ្ទៀងផ្ទាត់ 🔓</button>
-
             <div id="status-text">ប្រព័ន្ធត្រូវបានចាក់សោរ</div>
         </div>
     </div>
 
     <div id="pc-ui">
-        <div id="status">📡 កំពុងភ្ជាប់ទៅកាមេរ៉ាពីចម្ងាយ (Cambodia-Network)...</div>
-        <video id="view-video" autoplay playsinline muted></video>
+        <div class="camera-sidebar">
+            <div class="sidebar-title">📹 កាមេរ៉ាអនឡាញ</div>
+            <div id="dynamic-btn-container"></div>
+        </div>
+
+        <div class="video-container">
+            <canvas id="tv-static-canvas"></canvas>
+            <div class="tv-overlay"></div>
+            
+            <div id="status">📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...</div>
+            
+            <video id="view-video" autoplay playsinline muted></video>
+        </div>
     </div>
 
     <script>
-        // 🔑 កំណត់លេខកូដសម្ងាត់ត្រង់នេះ
         const CORRECT_PIN = "2011"; 
-
         const pinInput = document.getElementById('pin-input');
         const loginCard = document.getElementById('login-card');
         const loginContainer = document.getElementById('login-container');
         const statusText = document.getElementById('status-text');
-        const lockIcon = document.getElementById('lock-icon');
         const pcUi = document.getElementById('pc-ui');
+        const videoElement = document.getElementById('view-video');
+        const statusElement = document.getElementById('status');
+        const btnContainer = document.getElementById('dynamic-btn-container');
 
-        const LIVE_ROOM_ID = 'hino-cambodia-local-secure-2026';
+        const BASE_ROOM_ID = 'hino-cambodia-secure-cam-';
+        let activeCameraId = null; 
+        let peer = null;
+        let currentCall = null;
+        let isMobile = false;
+        let existingButtons = {};
         
+        // សម្រាប់កម្មវិធី Canvas TV Static
+        let canvas, ctx, animationFrameId;
+
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun.services.mozilla.com' },
-                    {
-                        urls: 'turn:139.59.245.105:3478?transport=udp',
-                        username: 'hino_security',
-                        credential: 'secure_password_2026'
-                    },
-                    {
-                        urls: 'turn:139.59.245.105:3478?transport=tcp',
-                        username: 'hino_security',
-                        credential: 'secure_password_2026'
-                    }
+                    { urls: 'turn:139.59.245.105:3478?transport=udp', username: 'hino_security', credential: 'secure_password_2026' },
+                    { urls: 'turn:139.59.245.105:3478?transport=tcp', username: 'hino_security', credential: 'secure_password_2026' }
                 ],
                 iceTransportPolicy: 'all'
             }
         };
-        
-        let peer = null;
-        let currentCall = null; 
-        let localStream = null;
 
         window.onload = function() {
-            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-            if (!isMobileDevice) {
-                // ប្រសិនបើជាកុំព្យូទ័រ ឱ្យលោតកូនកណ្តុរចូលប្រឡោះវាយកូដភ្លាម
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (!isMobile) {
                 pinInput.focus();
             } else {
-                // ប្រសិនបើជាទូរសព្ទ គឺដំណើរការកាមេរ៉ាអូតូភ្លាម មិនបាច់វាយកូដទេ
                 document.body.classList.add('phone-stealth-mode');
-                startCamera();
+                const urlParams = new URLSearchParams(window.location.search);
+                const camId = urlParams.get('cam') || '1'; 
+                startCamera(camId);
             }
         };
 
-        // --- មុខងារផ្ទៀងផ្ទាត់លេខកូដ (សម្រាប់កុំព្យូទ័រ) ---
+        // 🔐 ផ្ទៀងផ្ទាត់កូដសម្ងាត់ (បានកែមិនឱ្យទាក់ទងគ្នាជាមួយប្រព័ន្ធទូរសព្ទមុនពេលដោះសោទេ)
         function verifyPIN() {
-            const userPIN = pinInput.value;
-
-            if (userPIN === CORRECT_PIN) {
-                statusText.innerText = "🔓 ត្រឹមត្រូវ! កំពុងចូលទៅកាន់ប្រព័ន្ធ...";
+            if (pinInput.value === CORRECT_PIN) {
+                statusText.innerText = "🔓 ត្រឹមត្រូវ! កំពុងចូល...";
                 statusText.style.color = "#50fa7b";
-                pinInput.style.borderColor = "#50fa7b";
-                lockIcon.innerText = "🔓";
-                lockIcon.style.transform = "scale(1.2)";
-                
                 setTimeout(() => {
                     loginCard.classList.add('fade-out');
                     setTimeout(() => {
-                        loginContainer.style.display = 'none'; // បិទផ្ទាំង Login ចោល
-                        pcUi.style.display = 'flex';           // បើកផ្ទាំងកាមេរ៉ា
-                        runAsPC();                             // ចាប់ផ្តើមដំណើរការប្រព័ន្ធតភ្ជាប់ PeerJS
+                        loginContainer.style.display = 'none'; 
+                        pcUi.style.display = 'flex';   
+                        
+                        // ចាប់ផ្តើមដំណើរការ Background ទូរទស្សន៍ដាច់ប៉ុស្តិ៍ និងប្រព័ន្ធ Peer
+                        initTVStatic();
+                        initPCServerListener(); 
                     }, 600);
-                }, 1000);
-
+                }, 500);
             } else {
-                statusText.innerText = "❌ លេខកូដមិនត្រឹមត្រូវទេ! ព្យាយាមម្តងទៀត";
+                statusText.innerText = "❌ លេខកូដមិនត្រឹមត្រូវទេ!";
                 statusText.style.color = "#ff5555";
                 loginCard.classList.add('error-shake');
-                pinInput.value = ""; 
-                pinInput.focus();
-
-                setTimeout(() => {
-                    loginCard.classList.remove('error-shake');
-                }, 400);
+                pinInput.value = ""; pinInput.focus();
+                setTimeout(() => { loginCard.classList.remove('error-shake'); }, 400);
             }
         }
+        function checkEnter(event) { if (event.key === "Enter") { verifyPIN(); } }
 
-        function checkEnter(event) {
-            if (event.key === "Enter") {
-                verifyPIN();
+        // 📺 មុខងារបង្កើតវីដេអូគ្រាប់ព្រិលទូរទស្សន៍ដាច់ប៉ុស្តិ៍ (Real TV Static Engine)
+        function initTVStatic() {
+            canvas = document.getElementById('tv-static-canvas');
+            ctx = canvas.getContext('2d');
+            
+            function resize() {
+                canvas.width = canvas.offsetWidth / 2; // បន្ថយ Resolution បន្តិចដើម្បីកុំឱ្យធ្ងន់ម៉ាស៊ីន
+                canvas.height = canvas.offsetHeight / 2;
             }
+            window.addEventListener('resize', resize);
+            resize();
+
+            function renderNoise() {
+                const width = canvas.width;
+                const height = canvas.height;
+                const imgData = ctx.createImageData(width, height);
+                const data = imgData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const noise = Math.random() * 255;
+                    data[i] = noise;     // R
+                    data[i+1] = noise;   // G
+                    data[i+2] = noise;   // B
+                    data[i+3] = 255;     // A (Opaque)
+                }
+                
+                ctx.putImageData(imgData, 0, 0);
+                animationFrameId = requestAnimationFrame(renderNoise);
+            }
+            renderNoise();
         }
 
-        // --- ផ្នែកកុំព្យូទ័រ (ដំណើរការក្រោយពេលវាយកូដត្រូវ) ---
-        function runAsPC() {
+        // --- ផ្នែកកុំព្យូទ័រ៖ ទទួលការភ្ជាប់ ---
+        function initPCServerListener() {
             if (peer) peer.destroy();
-            peer = new Peer(LIVE_ROOM_ID, peerConfig);
+            peer = new Peer(peerConfig);
+            
+            peer.on('open', () => {
+                statusElement.innerText = "📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...";
+            });
 
             peer.on('call', (call) => {
-                if (currentCall) {
-                    call.answer();
-                    setTimeout(() => { call.close(); }, 500);
-                    return;
+                const incomingCamId = call.peer.replace(BASE_ROOM_ID, '');
+                
+                if (!existingButtons[incomingCamId]) {
+                    createCameraButton(incomingCamId);
                 }
 
-                call.answer();
-                currentCall = call; 
-                
-                call.on('stream', (remoteStream) => {
-                    document.getElementById('status').style.display = 'none';
-                    const video = document.getElementById('view-video');
-                    video.style.display = 'block';
-                    video.srcObject = remoteStream;
-                    
-                    video.play().catch(err => {
-                        document.getElementById('status').style.display = 'block';
-                        document.getElementById('status').style.color = '#ff3333';
-                        document.getElementById('status').innerText = "🛑 សូមចុចលើអេក្រង់កុំព្យូទ័រ ១ដង ដើម្បីបើករូបภาพ";
-                        
-                        document.body.onclick = () => {
-                            video.play();
-                            document.getElementById('status').style.display = 'none';
-                        };
-                    });
-                });
-
-                call.on('close', () => {
-                    handleDisconnect();
-                });
-            });
-
-            peer.on('error', (err) => {
-                setTimeout(runAsPC, 2000);
+                if (incomingCamId === activeCameraId) {
+                    if (currentCall) currentCall.close();
+                    currentCall = call;
+                    call.answer();
+                    handleIncomingStream(call);
+                } else {
+                    call.answer();
+                    setTimeout(() => { if(activeCameraId !== incomingCamId) call.close(); }, 1000);
+                }
             });
         }
 
-        function handleDisconnect() {
-            document.getElementById('status').style.display = 'block';
-            document.getElementById('status').style.color = '#2ac767';
-            document.getElementById('status').innerText = "📭 ទូរសព្ទបានដាច់។ កំពុងរង់ចាំការភ្ជាប់ឡើងវិញអូតូ...";
-            const video = document.getElementById('view-video');
-            video.style.display = 'none';
-            video.srcObject = null;
-            currentCall = null; 
+        function createCameraButton(camId) {
+            const newBtn = document.createElement('button');
+            newBtn.className = 'cam-btn';
+            newBtn.id = 'btn-cam' + camId;
+            newBtn.innerHTML = `<span>Camera ${camId} 📷</span> <div class="status-dot"></div>`;
+            
+            newBtn.onclick = function() {
+                switchCamera(camId);
+            };
+
+            btnContainer.appendChild(newBtn);
+            existingButtons[camId] = true;
+
+            if (activeCameraId === null) {
+                switchCamera(camId);
+            }
+        }
+
+        function switchCamera(camId) {
+            activeCameraId = camId;
+            
+            document.querySelectorAll('.cam-btn').forEach(btn => btn.classList.remove('active'));
+            const currentBtn = document.getElementById('btn-cam' + camId);
+            if(currentBtn) currentBtn.classList.add('active');
+
+            statusElement.style.display = 'block';
+            statusElement.style.color = '#ffb86c';
+            statusElement.innerText = `📡 NO SIGNAL៖ កំពុងភ្ជាប់ទៅកាមេរ៉ាទី ${camId}...`;
+            
+            videoElement.style.display = 'none';
+            videoElement.srcObject = null;
+
+            document.body.onclick = () => {
+                videoElement.play().then(() => {
+                    statusElement.style.display = 'none';
+                }).catch(e => {});
+            };
+        }
+
+        function handleIncomingStream(call) {
+            call.on('stream', (remoteStream) => {
+                statusElement.style.display = 'none';
+                videoElement.style.display = 'block';
+                videoElement.srcObject = remoteStream;
+                videoElement.play().catch(err => {
+                    statusElement.style.display = 'block';
+                    statusElement.innerText = "🛑 សូមចុចលើផ្ទៃអេក្រង់ខាងស្តាំ ១ដង ដើម្បីបើករូបភាព";
+                });
+            });
+            call.on('close', () => {
+                statusElement.style.display = 'block';
+                statusElement.style.color = '#ff5555';
+                statusElement.innerText = `⚠️ SIGNAL LOST៖ កាមេរ៉ាទី ${activeCameraId} បានដាច់។`;
+                videoElement.style.display = 'none'; 
+            });
         }
 
         // --- ផ្នែកទូរសព្ទ ---
-        function startCamera() {
+        function startCamera(camId) {
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
                 audio: false
             })
             .then((stream) => {
                 localStream = stream;
-                connectToPC();
+                connectToPC(camId);
             })
-            .catch((err) => {
-                setTimeout(startCamera, 5000);
-            });
+            .catch((err) => { setTimeout(() => startCamera(camId), 5000); });
         }
 
-        function connectToPC() {
+        function connectToPC(camId) {
             if (peer) peer.destroy();
-            peer = new Peer(peerConfig); 
+            peer = new Peer(BASE_ROOM_ID + camId, peerConfig); 
 
             peer.on('open', (id) => {
-                const call = peer.call(LIVE_ROOM_ID, localStream);
-                if (call) {
-                    currentCall = call;
-                    call.on('close', () => {
-                        currentCall = null;
-                        setTimeout(connectToPC, 3000);
-                    });
-                }
+                setInterval(() => {
+                    if(!peer.destroyed) {
+                        peer.call(BASE_ROOM_ID + camId, localStream);
+                    }
+                }, 4000);
             });
 
-            peer.on('error', (err) => {
-                setTimeout(connectToPC, 4000);
-            });
+            peer.on('error', (err) => { setTimeout(() => connectToPC(camId), 4000); });
         }
     </script>
 </body>
