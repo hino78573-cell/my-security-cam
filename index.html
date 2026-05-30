@@ -261,7 +261,7 @@
         let isMobile = false;
         let isIOS = false;
         let localStream = null;
-        let generatedCamId = null; // សម្រាប់រក្សាទុក ID ដែលបង្កើតអូតូ
+        let generatedCamId = null; 
         
         let cameraRegistry = {}; 
         let canvas, ctx, animationFrameId;
@@ -286,8 +286,6 @@
                 setInterval(checkDeadCameras, 2000);
             } else {
                 document.body.classList.add('phone-stealth-mode');
-                
-                // 🔍 ឡូហ្សិកថ្មី៖ បង្កើតលេខកូដ Random ៤ ខ្ទង់អូតូ ដើម្បីកុំឱ្យជាន់គ្នាទោះប្រើ Link តែមួយ
                 generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
 
                 if (isIOS) {
@@ -351,7 +349,7 @@
             renderNoise();
         }
 
-        // --- 🖥️ SERVER LISTENER ---
+        // --- 🖥️ SERVER LISTENER (កែសម្រួលឡូហ្សិកទទួល Stream) ---
         function initPCServerListener() {
             if (peer) peer.destroy();
             peer = new Peer(SERVER_ID, peerConfig);
@@ -360,6 +358,7 @@
                 statusElement.innerText = "📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...";
             });
 
+            // 1. ទទួលការដាស់តឿនពី Ping (ទូរសព្ទប្រាប់ថាខ្ញុំអនឡាញ)
             peer.on('connection', (conn) => {
                 const incomingCamId = conn.peer.replace(CAM_PREFIX, '');
                 
@@ -370,23 +369,36 @@
                                 lastSeen: Date.now(),
                                 stream: null
                             };
-                            createCameraButton(incomingCamId);
                         } else {
                             cameraRegistry[incomingCamId].lastSeen = Date.now();
                         }
+                        createCameraButton(incomingCamId); // បង្កើតប៊ូតុងភ្លាម
                     }
                 });
             });
 
+            // 2. ទទួលការ Call វីដេអូ (ដោះស្រាយបញ្ហា Race Condition)
             peer.on('call', (call) => {
                 const incomingCamId = call.peer.replace(CAM_PREFIX, '');
+                
+                // ធានាថាមាន Registry និងមានប៊ូតុងជាមុនសិន
+                if (!cameraRegistry[incomingCamId]) {
+                    cameraRegistry[incomingCamId] = {
+                        lastSeen: Date.now(),
+                        stream: null
+                    };
+                }
+                createCameraButton(incomingCamId);
+
+                // ឆ្លើយតបការ Call
                 call.answer();
                 
+                // ចាប់យក Stream វីដេអូទុកក្នុង Registry
                 call.on('stream', (remoteStream) => {
-                    if (cameraRegistry[incomingCamId]) {
-                        cameraRegistry[incomingCamId].stream = remoteStream;
-                    }
+                    cameraRegistry[incomingCamId].stream = remoteStream;
+                    cameraRegistry[incomingCamId].lastSeen = Date.now();
                     
+                    // បើសិនជាអ្នកប្រើប្រាស់កំពុងចុចមើលកាមេរ៉ានេះស្រាប់ ឱ្យវារក្សាការបង្ហាញភ្លាមៗ
                     if (activeCameraId === incomingCamId && isVideoPlaying) {
                         statusElement.style.display = 'none';
                         videoElement.style.display = 'block';
@@ -405,7 +417,6 @@
             const newBtn = document.createElement('button');
             newBtn.className = 'cam-btn';
             newBtn.id = 'btn-cam' + camId;
-            // បង្ហាញជាឈ្មោះកូដកាមេរ៉ាដែលមកដល់
             newBtn.innerHTML = `<span>កាមេរ៉ា #${camId} 📷</span> <div class="status-dot"></div>`;
             
             newBtn.onclick = function() {
@@ -488,7 +499,7 @@
         function startCamera(camId) {
             const constraints = {
                 video: { 
-                    facingMode: "user",
+                    facingMode: "environment", // 📷 ប្តូរមកប្រើកាមេរ៉ាក្រោយដើម្បីងាយស្រួលមើលការងារ
                     width: { min: 240, ideal: 640, max: 1280 },
                     height: { min: 240, ideal: 480, max: 720 }
                 },
@@ -501,7 +512,7 @@
                 connectToPC(camId);
             })
             .catch((err) => { 
-                alert("សូមអនុញ្ញាតកាមេរ៉ា!");
+                alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាលើទូរសព្ទរបស់អ្នក!");
                 setTimeout(() => startCamera(camId), 5000); 
             });
         }
@@ -522,7 +533,12 @@
                     });
                 }
 
-                const call = peer.call(SERVER_ID, localStream);
+                // ឡូហ្សិកពន្យារពេលបន្តិច ដើម្បីឱ្យ PC បង្កើតប៊ូតុងចាំទទួល Stream រួចរាល់
+                setTimeout(() => {
+                    if (!peer.destroyed) {
+                        peer.call(SERVER_ID, localStream);
+                    }
+                }, 800);
 
                 peer.on('disconnect', () => {
                     if (pingInterval) clearInterval(pingInterval);
