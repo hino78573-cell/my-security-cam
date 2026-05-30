@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 ប្រព័ន្ធគ្រប់គ្រងកាមេរ៉ា (Fixed Connection)</title>
+    <title>🔐 ប្រព័ន្ធគ្រប់គ្រងកាមេរ៉ា (Smart Toggle & Auto-Clean)</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         html, body { 
@@ -52,7 +52,7 @@
             flex-direction: column;
         }
 
-        /* 🟢 ស្ទីលប៊ូតុងកាមេរ៉ា (មានស៊ុមពណ៌បៃតងជុំវិញ) */
+        /* 🟢 ស្ទីលប៊ូតុងកាមេរ៉ា */
         .cam-btn {
             background: rgba(80, 250, 123, 0.03);
             color: #50fa7b;
@@ -88,12 +88,25 @@
             box-shadow: 0 0 20px rgba(80, 250, 123, 0.5);
         }
 
+        /* 🔴 ស្ទីលប៊ូតុងពេលយើងចុចបិទវីដេអូបណ្តោះអាសន្ន */
+        .cam-btn.paused {
+            border-color: #ffb86c !important;
+            color: #ffb86c !important;
+            background: rgba(255, 184, 108, 0.05) !important;
+            box-shadow: 0 0 10px rgba(255, 184, 108, 0.2) !important;
+        }
+
         .status-dot {
             width: 10px;
             height: 10px;
             background: #50fa7b;
             border-radius: 50%;
             box-shadow: 0 0 8px #50fa7b;
+        }
+
+        .cam-btn.paused .status-dot {
+            background: #ffb86c !important;
+            box-shadow: 0 0 8px #ffb86c !important;
         }
 
         /* 📺 តំបន់បង្ហាញវីដេអូ */
@@ -244,16 +257,18 @@
         const statusElement = document.getElementById('status');
         const btnContainer = document.getElementById('dynamic-btn-container');
 
-        // 🛠️ ប្តូរការកំណត់ ID ឱ្យត្រូវតាមស្តង់ដារលែងលោតជាន់គ្នា
         const SERVER_ID = 'hino-cambodia-main-server'; 
         const CAM_PREFIX = 'hino-cambodia-secure-cam-';
         
         let activeCameraId = null; 
+        let isVideoPlaying = false; // ត្រួតពិនិត្យស្ថានភាព ចុចបើក/ចុចបិទ
         let peer = null;
         let isMobile = false;
-        let existingButtons = {};
         let localStream = null;
         
+        // វត្ថុសម្រាប់ផ្ទុកទិន្នន័យចាំបាច់របស់កាមេរ៉ានីមួយៗ
+        let cameraRegistry = {}; 
+
         let canvas, ctx, animationFrameId;
 
         const peerConfig = {
@@ -271,8 +286,9 @@
             isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (!isMobile) {
                 pinInput.focus();
+                // បង្កើតការត្រួតពិនិត្យមើលទូរសព្ទណាដែលដាច់ការទាក់ទងរៀងរាល់ ២ វិនាទីម្តង
+                setInterval(checkDeadCameras, 2000);
             } else {
-                // បើបើកលើទូរសព្ទ គឺឱ្យអេក្រង់ងងឹតឈឹងភ្លាម រួចដំណើរការកាមេរ៉ា
                 document.body.classList.add('phone-stealth-mode');
                 const urlParams = new URLSearchParams(window.location.search);
                 const camId = urlParams.get('cam') || '1'; 
@@ -331,39 +347,39 @@
         // --- 🖥️ ផ្នែកកុំព្យូទ័រ (SERVER LISTENER) ---
         function initPCServerListener() {
             if (peer) peer.destroy();
-            
-            // កុំព្យូទ័រប្រើ ID ថេរមួយច្បាស់លាស់ដើម្បីឱ្យទូរសព្ទស្គាល់
             peer = new Peer(SERVER_ID, peerConfig);
             
             peer.on('open', () => {
                 statusElement.innerText = "📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...";
             });
 
-            // ពេលមានទូរសព្ទ Call ចូលមក
             peer.on('call', (call) => {
                 const incomingCamId = call.peer.replace(CAM_PREFIX, '');
                 
-                // បង្កើតប៊ូតុងភ្លាមបើមិនទាន់មាន
-                if (!existingButtons[incomingCamId]) {
+                // កត់ត្រាពេលវេលាដែលបានបាញ់សញ្ញាមកចុងក្រោយបង្អស់ (Keep-Alive)
+                if (!cameraRegistry[incomingCamId]) {
+                    cameraRegistry[incomingCamId] = {
+                        lastSeen: Date.now(),
+                        stream: null
+                    };
                     createCameraButton(incomingCamId);
+                } else {
+                    cameraRegistry[incomingCamId].lastSeen = Date.now();
                 }
 
-                // ទទួលយក Stream វីដេអូ
                 call.answer();
                 
                 call.on('stream', (remoteStream) => {
-                    // រក្សាទុកកាមេរ៉ាដែលកំពុងសកម្ម
-                    if (activeCameraId === incomingCamId) {
+                    cameraRegistry[incomingCamId].stream = remoteStream;
+                    
+                    // បង្ហាញវីដេអូភ្លាមបើកាមេរ៉ានេះកំពុងត្រូវបានជ្រើសរើស និងបើកមើល
+                    if (activeCameraId === incomingCamId && isVideoPlaying) {
                         statusElement.style.display = 'none';
                         videoElement.style.display = 'block';
-                        videoElement.srcObject = remoteStream;
-                        videoElement.play().catch(e => {});
-                    }
-                });
-
-                call.on('close', () => {
-                    if (activeCameraId === incomingCamId) {
-                        removeActiveStream(incomingCamId);
+                        if (videoElement.srcObject !== remoteStream) {
+                            videoElement.srcObject = remoteStream;
+                            videoElement.play().catch(e => {});
+                        }
                     }
                 });
             });
@@ -376,37 +392,101 @@
             newBtn.innerHTML = `<span>Camera ${camId} 📷</span> <div class="status-dot"></div>`;
             
             newBtn.onclick = function() {
-                switchCamera(camId);
+                handleButtonClick(camId);
             };
 
             btnContainer.appendChild(newBtn);
-            existingButtons[camId] = true;
 
-            // បើជាកាមេរ៉ាដំបូង ឱ្យវាជ្រើសរើសអូតូ
+            // បើជាកាមេរ៉ាដំបូងចូលមក ឱ្យវាដើរអូតូហ្មង
             if (activeCameraId === null) {
-                switchCamera(camId);
+                activeCameraId = camId;
+                isVideoPlaying = true;
+                document.querySelectorAll('.cam-btn').forEach(btn => btn.classList.remove('active', 'paused'));
+                newBtn.classList.add('active');
             }
         }
 
-        function switchCamera(camId) {
-            activeCameraId = camId;
-            document.querySelectorAll('.cam-btn').forEach(btn => btn.classList.remove('active'));
-            const currentBtn = document.getElementById('btn-cam' + camId);
-            if(currentBtn) currentBtn.classList.add('active');
-
-            statusElement.style.display = 'block';
-            statusElement.style.color = '#ffb86c';
-            statusElement.innerText = `📡 NO SIGNAL៖ កំពុងរង់ចាំសញ្ញាពីកាមេរ៉ាទី ${camId}...`;
+        // ឡូហ្សិក៖ ចុចមួយបើក ចុចមួយបិទ (Toggle)
+        function handleButtonClick(camId) {
+            const clickedBtn = document.getElementById('btn-cam' + camId);
             
-            videoElement.style.display = 'none';
-            videoElement.srcObject = null;
+            if (activeCameraId === camId) {
+                // បើចុចចំកាមេរ៉ាដែលកំពុងមើលដដែល គឺស្មើនឹង "បិទ / ផ្អាកមើល"
+                if (isVideoPlaying) {
+                    isVideoPlaying = false;
+                    clickedBtn.classList.remove('active');
+                    clickedBtn.classList.add('paused');
+                    
+                    // បង្ហាញអេក្រង់ដាច់ប៉ុស្តិ៍
+                    videoElement.style.display = 'none';
+                    videoElement.srcObject = null;
+                    statusElement.style.display = 'block';
+                    statusElement.style.color = '#ffb86c';
+                    statusElement.innerText = `⏸️ បានផ្អាកការមើលកាមេរ៉ាទី ${camId} (ចុចម្តងទៀតដើម្បីបើក)`;
+                } else {
+                    // បើកំពុងបិទ រួចចុចម្តងទៀត គឺ "បើកមើលវិញ"
+                    isVideoPlaying = true;
+                    clickedBtn.classList.remove('paused');
+                    clickedBtn.classList.add('active');
+                    
+                    if (cameraRegistry[camId] && cameraRegistry[camId].stream) {
+                        statusElement.style.display = 'none';
+                        videoElement.style.display = 'block';
+                        videoElement.srcObject = cameraRegistry[camId].stream;
+                        videoElement.play().catch(e => {});
+                    }
+                }
+            } else {
+                // បើចុចរើសកាមេរ៉ាផ្សេងផ្សេងទៀត
+                activeCameraId = camId;
+                isVideoPlaying = true;
+                
+                document.querySelectorAll('.cam-btn').forEach(btn => btn.classList.remove('active', 'paused'));
+                if(clickedBtn) clickedBtn.classList.add('active');
+
+                if (cameraRegistry[camId] && cameraRegistry[camId].stream) {
+                    statusElement.style.display = 'none';
+                    videoElement.style.display = 'block';
+                    videoElement.srcObject = cameraRegistry[camId].stream;
+                    videoElement.play().catch(e => {});
+                } else {
+                    videoElement.style.display = 'none';
+                    videoElement.srcObject = null;
+                    statusElement.style.display = 'block';
+                    statusElement.style.color = '#ffb86c';
+                    statusElement.innerText = `📡 NO SIGNAL៖ កំពុងរង់ចាំសញ្ញាពីកាមេរ៉ាទី ${camId}...`;
+                }
+            }
         }
 
-        function removeActiveStream(camId) {
-            statusElement.style.display = 'block';
-            statusElement.style.color = '#ff5555';
-            statusElement.innerText = `⚠️ SIGNAL LOST៖ កាមេរ៉ាទី ${camId} បានដាច់ការតភ្ជាប់។`;
-            videoElement.style.display = 'none';
+        // មុខងារត្រួតពិនិត្យ និងលុបប៊ូតុងកាមេរ៉ាណាដែលឈប់ភ្ជាប់ (Auto-Remove)
+        function checkDeadCameras() {
+            const now = Date.now();
+            for (const camId in cameraRegistry) {
+                // បើលើសពី ៦ វិនាទី អត់ឃើញបាញ់សញ្ញាមកទេ គឺចាត់ទុកថាដាច់ការតភ្ជាប់ហើយ (ទូរសព្ទបិទចោល)
+                if (now - cameraRegistry[camId].lastSeen > 6000) {
+                    
+                    // លុបប៊ូតុងចេញពី UI ភ្លាម
+                    const btnToRemove = document.getElementById('btn-cam' + camId);
+                    if (btnToRemove) {
+                        btnToRemove.remove();
+                    }
+
+                    // បើកាមេរ៉ាដែលដាច់ហ្នឹង ជាកាមេរ៉ាដែលយើងកំពុងមើល ត្រូវឱ្យអេក្រង់ទៅជាទំនេរវិញ
+                    if (activeCameraId === camId) {
+                        activeCameraId = null;
+                        isVideoPlaying = false;
+                        videoElement.style.display = 'none';
+                        videoElement.srcObject = null;
+                        statusElement.style.display = 'block';
+                        statusElement.style.color = '#ff5555';
+                        statusElement.innerText = `⚠️ SIGNAL LOST៖ កាមេរ៉ាទី ${camId} បានដាច់ទាំងស្រុង និងលុបចេញពីប្រព័ន្ធ។`;
+                    }
+
+                    // លុបចេញពីបញ្ជី Registry
+                    delete cameraRegistry[camId];
+                }
+            }
         }
 
         // --- 📱 ផ្នែកទូរសព្ទ (CAMERA STREAMER) ---
@@ -427,17 +507,15 @@
 
         function connectToPC(camId) {
             if (peer) peer.destroy();
-            
-            // ទូរសព្ទបង្កើត ID ផ្ទាល់ខ្លួន
             peer = new Peer(CAM_PREFIX + camId, peerConfig); 
 
             peer.on('open', (id) => {
-                // រៀងរាល់ 3 វិនាទី បាញ់វីដេអូទៅកាន់កុំព្យូទ័រ (SERVER_ID)
+                // បាញ់វីដេអូទៅកាន់កុំព្យូទ័ររៀងរាល់ ២.៥ វិនាទីម្តង ដើម្បីធ្វើជាសញ្ញាប្រាប់ថាទូរសព្ទនៅរស់ (Keep-Alive)
                 setInterval(() => {
                     if(!peer.destroyed && localStream) {
                         peer.call(SERVER_ID, localStream);
                     }
-                }, 3000);
+                }, 2500);
             });
 
             peer.on('error', (err) => { 
