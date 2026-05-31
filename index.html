@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HELLO! :)</title>
+    <title>🔐 ប្រព័ន្ធគ្រប់គ្រងកាមេរ៉ា (Xirsys Cloud Tunneling)</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         html, body { 
@@ -229,7 +229,7 @@
 
     <div id="pc-ui">
         <div class="camera-sidebar">
-            <div class="sidebar-title">camera📷</div>
+            <div class="sidebar-title">📹 កាមេរ៉ាអនឡាញ</div>
             <div id="dynamic-btn-container"></div>
         </div>
 
@@ -237,7 +237,7 @@
             <canvas id="tv-static-canvas"></canvas>
             <div class="tv-overlay"></div>
             
-            <div id="status"></div>
+            <div id="status">📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...</div>
             
             <video id="view-video" autoplay playsinline muted></video>
         </div>
@@ -267,27 +267,21 @@
         let cameraRegistry = {}; 
         let canvas, ctx, animationFrameId;
 
-        // 🌐 ប្តូរមកប្រើប្រាស់ STUN/TURN Server ថ្មីរបស់ Metered (ជំនះរាល់រនាំង Firewall ស៊ីមទូរសព្ទ)
+        // 🌐 ប្តូរមកប្រើប្រាស់ Xirsys Cloud TURN Servers (ល្បឿនលឿន និងអត់មាន Expired ផ្តេសផ្តាស)
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:global.stun.twilio.com:3478' },
-                    // Public Relay TURN Servers ល្បឿនលឿន និង Free
-                    { 
-                        urls: 'turn:relay.metered.ca:80', 
-                        username: 'metered', 
-                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
+                    { urls: 'stun:stun.xirsys.com' },
+                    {
+                        urls: 'turn:turn.xirsys.com:80?transport=udp',
+                        username: 'hino_cam_secure:b4e19b58-e393-11ee-8260-0242ac140003',
+                        credential: 'b4e19be4-e393-11ee-8260-0242ac140003'
                     },
-                    { 
-                        urls: 'turn:relay.metered.ca:443', 
-                        username: 'metered', 
-                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
-                    },
-                    { 
-                        urls: 'turn:relay.metered.ca:443?transport=tcp', 
-                        username: 'metered', 
-                        credential: '6b4a53423758364b6154685a44396263595166416d513d3d' 
+                    {
+                        urls: 'turn:turn.xirsys.com:443?transport=tcp',
+                        username: 'hino_cam_secure:b4e19b58-e393-11ee-8260-0242ac140003',
+                        credential: 'b4e19be4-e393-11ee-8260-0242ac140003'
                     }
                 ],
                 iceTransportPolicy: 'all'
@@ -309,31 +303,20 @@
         };
 
         function autoStartMobileCamera() {
-            const constraints = {
+            navigator.mediaDevices.getUserMedia({ 
                 video: { 
-                    facingMode: { exact: "user" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 }
-                },
-                audio: false
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
+                    facingMode: "user",
+                    width: { ideal: 640 }, // បន្ថយមកកម្រិតធម្មតាដើម្បីកុំឱ្យធ្ងន់សេវាស៊ីមពេក
+                    height: { ideal: 480 }
+                }, 
+                audio: false 
+            })
             .then((stream) => {
                 localStream = stream;
                 connectToPC(generatedCamId);
             })
-            .catch((err) => { 
-                console.log("គាំងកូដបង្ខំ HD, កំពុងប្តូរទៅប្រើកម្រិតធម្មតា...", err);
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then((stream) => {
-                    localStream = stream;
-                    connectToPC(generatedCamId);
-                })
-                .catch((e) => {
-                    alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាក្នុង Browser របស់អ្នក!");
-                });
+            .catch((e) => {
+                alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាក្នុង Browser របស់អ្នក!");
             });
         }
 
@@ -418,7 +401,6 @@
                 createCameraButton(incomingCamId);
 
                 call.answer();
-                maximizeBitrate(call.peerConnection);
 
                 call.on('stream', (remoteStream) => {
                     cameraRegistry[incomingCamId].stream = remoteStream;
@@ -461,7 +443,7 @@
                     videoElement.srcObject = null;
                     statusElement.style.display = 'block';
                     statusElement.style.color = '#ffb86c';
-                    statusElement.innerText = ` #${camId}`;
+                    statusElement.innerText = `⏸️ បានផ្អាកការមើលកាមេរ៉ា #${camId}`;
                 } else {
                     isVideoPlaying = true;
                     clickedBtn.classList.remove('paused');
@@ -510,7 +492,7 @@
                         videoElement.srcObject = null;
                         statusElement.style.display = 'block';
                         statusElement.style.color = '#ff5555';
-                        statusElement.innerText = ``;
+                        statusElement.innerText = `⚠️ SIGNAL LOST៖ កាមេរ៉ា #${camId} បានដាច់ការទាក់ទង។`;
                     }
                     delete cameraRegistry[camId];
                 }
@@ -535,10 +517,7 @@
 
                 setTimeout(() => {
                     if (!peer.destroyed) {
-                        const call = peer.call(SERVER_ID, localStream);
-                        if(call) {
-                            maximizeBitrate(call.peerConnection);
-                        }
+                        peer.call(SERVER_ID, localStream);
                     }
                 }, 1000);
 
@@ -550,31 +529,6 @@
             peer.on('error', (err) => { 
                 setTimeout(() => connectToPC(camId), 4000); 
             });
-        }
-
-        function maximizeBitrate(peerConnection) {
-            if (!peerConnection) return;
-
-            peerConnection.oniceconnectionstatechange = () => {
-                if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
-                    setTimeout(() => {
-                        const senders = peerConnection.getSenders();
-                        senders.forEach(sender => {
-                            if (sender.track && sender.track.kind === 'video') {
-                                const parameters = sender.getParameters();
-                                if (!parameters.encodings) parameters.encodings = [{}];
-                                
-                                parameters.encodings[0].maxBitrate = 2500000; 
-                                parameters.encodings[0].firInterval = 0; 
-                                
-                                sender.setParameters(parameters).catch(err => {
-                                    console.log("Bitrate override skipped:", err);
-                                });
-                            }
-                        });
-                    }, 1000);
-                }
-            };
         }
     </script>
 </body>
