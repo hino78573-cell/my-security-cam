@@ -312,9 +312,13 @@
                 audio: false 
             })
             .then((stream) => {
-                localStream = stream;
-                connectToPC(generatedCamId);
-            })
+    localStream = stream;
+
+    console.log("CAMERA STARTED");
+    console.log("VIDEO TRACKS:", stream.getVideoTracks().length);
+
+    connectToPC(generatedCamId);
+})
             .catch((e) => {
                 alert("សូមអនុញ្ញាតសិទ្ធិបើកកាមេរ៉ាក្នុង Browser របស់អ្នក!");
             });
@@ -374,7 +378,8 @@
             peer = new Peer(SERVER_ID, peerConfig);
             
             peer.on('open', () => {
-                statusElement.innerText = "📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...";
+                    console.log("MOBILE CONNECTED:", id);
+                    const conn = peer.connect(SERVER_ID);
             });
 
             peer.on('connection', (conn) => {
