@@ -7,86 +7,173 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            background-color: #0d0e15; overflow: hidden; 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: #0d0e15; 
+            overflow: hidden; 
             font-family: 'Khmer OS Battambang', sans-serif; 
         }
 
+        /* 🖥️ ផ្ទាំងបញ្ជាកុំព្យូទ័រ */
         #pc-ui {
-            width: 100%; height: 100%; display: none; 
-            background-color: #0d0e15; position: relative;
+            width: 100%;
+            height: 100%;
+            display: none; 
+            background-color: #0d0e15;
+            position: relative;
         }
 
+        /* 🎛️ របារបញ្ជីប៊ូតុងកាមេរ៉ា (ខាងឆ្វេងអេក្រង់) */
         .camera-sidebar {
-            width: 260px; background: #11121a; border-right: 2px solid #1f202e;
-            display: flex; flex-direction: column; padding: 20px;
-            box-sizing: border-box; z-index: 20;
+            width: 260px;
+            background: #11121a;
+            border-right: 2px solid #1f202e;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 20;
         }
 
         .sidebar-title {
-            color: #8be9fd; font-size: 18px; margin-bottom: 20px;
-            font-weight: bold; text-align: center; border-bottom: 1px solid #1f202e;
+            color: #8be9fd;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #1f202e;
             padding-bottom: 10px;
         }
 
-        #dynamic-btn-container { display: flex; flex-direction: column; }
-
-        .cam-btn {
-            background: rgba(80, 250, 123, 0.03); color: #50fa7b;
-            border: 2px solid #50fa7b; padding: 14px; border-radius: 12px;
-            margin-bottom: 14px; font-size: 16px; cursor: pointer;
-            text-align: left; display: flex; justify-content: space-between;
-            align-items: center; font-weight: bold;
-            box-shadow: 0 0 10px rgba(80, 250, 123, 0.15); 
-            transition: all 0.3s ease-in-out; animation: popIn 0.4s ease-out; 
+        #dynamic-btn-container {
+            display: flex;
+            flex-direction: column;
         }
 
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        /* 🟢 ស្ទីលប៊ូតុងកាមេរ៉ា */
+        .cam-btn {
+            background: rgba(80, 250, 123, 0.03);
+            color: #50fa7b;
+            border: 2px solid #50fa7b; 
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(80, 250, 123, 0.15); 
+            transition: all 0.3s ease-in-out;
+            animation: popIn 0.4s ease-out; 
+        }
 
-        .cam-btn:hover { background: rgba(80, 250, 123, 0.1); box-shadow: 0 0 15px rgba(80, 250, 123, 0.3); }
-        .cam-btn.active { background: #50fa7b !important; color: #11121a !important; box-shadow: 0 0 20px rgba(80, 250, 123, 0.5); }
-        .cam-btn.paused { border-color: #ffb86c !important; color: #ffb86c !important; background: rgba(255, 184, 108, 0.05) !important; box-shadow: 0 0 10px rgba(255, 184, 108, 0.2) !important; }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
-        .status-dot { width: 10px; height: 10px; background: #50fa7b; border-radius: 50%; box-shadow: 0 0 8px #50fa7b; }
-        .cam-btn.paused .status-dot { background: #ffb86c !important; box-shadow: 0 0 8px #ffb86c !important; }
+        .cam-btn:hover {
+            background: rgba(80, 250, 123, 0.1);
+            box-shadow: 0 0 15px rgba(80, 250, 123, 0.3);
+        }
 
+        .cam-btn.active {
+            background: #50fa7b !important;
+            color: #11121a !important;
+            box-shadow: 0 0 20px rgba(80, 250, 123, 0.5);
+        }
+
+        .cam-btn.paused {
+            border-color: #ffb86c !important;
+            color: #ffb86c !important;
+            background: rgba(255, 184, 108, 0.05) !important;
+            box-shadow: 0 0 10px rgba(255, 184, 108, 0.2) !important;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #50fa7b;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #50fa7b;
+        }
+
+        .cam-btn.paused .status-dot {
+            background: #ffb86c !important;
+            box-shadow: 0 0 8px #ffb86c !important;
+        }
+
+        /* 📺 តំបន់បង្ហាញវីដេអូ */
         .video-container {
-            flex: 1; display: flex; justify-content: center; align-items: center;
-            background: #000; position: relative; overflow: hidden;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
         }
 
         #tv-static-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
         }
 
         .tv-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 6px 100%; z-index: 2; pointer-events: none;
+            background-size: 100% 4px, 6px 100%;
+            z-index: 2;
+            pointer-events: none;
         }
 
         video { 
-            height: 100vh; width: auto; object-fit: contain; background: #000; 
-            display: none; position: relative; z-index: 5; 
+            height: 100vh;      
+            width: auto;        
+            object-fit: contain; 
+            background: #000; 
+            display: none; 
+            position: relative;
+            z-index: 5; 
         }
 
         #status { 
-            position: absolute; color: #ff5555; font-weight: bold; font-size: 18px; 
-            text-align: center; z-index: 10; background: rgba(0, 0, 0, 0.85); 
-            padding: 15px 25px; border-radius: 8px; pointer-events: none;
-            border: 1px solid rgba(255, 85, 85, 0.3); box-shadow: 0 0 15px rgba(255, 85, 85, 0.2);
+            position: absolute; 
+            color: #ff5555; 
+            font-weight: bold; 
+            font-size: 18px; 
+            text-align: center; 
+            z-index: 10; 
+            background: rgba(0, 0, 0, 0.85); 
+            padding: 15px 25px; 
+            border-radius: 8px; 
+            pointer-events: none;
+            border: 1px solid rgba(255, 85, 85, 0.3);
+            box-shadow: 0 0 15px rgba(255, 85, 85, 0.2);
         }
 
+        /* ------------------ ផ្ទាំងចាក់សោរ PIN ------------------ */
         #login-container {
-            position: absolute; width: 100%; height: 100%;
+            position: absolute;
+            width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
             z-index: 100; background-color: #1e1e2e;
         }
 
         .login-box {
-            background: rgba(255, 255, 255, 0.05); padding: 40px 30px; border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4); text-align: center; backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1); width: 320px; color: white;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px 30px; border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            text-align: center; backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 320px; color: white;
         }
 
         .icon-lock { font-size: 50px; margin-bottom: 10px; color: #ffb86c; display: inline-block; }
@@ -110,13 +197,17 @@
         .error-shake { animation: shake 0.2s ease-in-out 2; border-color: #ff5555 !important; }
         .fade-out { opacity: 0; transform: scale(0.9); transition: 0.6s ease-out; }
 
+        /* 📱 ស្ទីលទូរសព្ទ Stealth Mode */
         .phone-stealth-mode { background: #000000 !important; }
         .phone-stealth-mode #pc-ui { display: none !important; }
         .phone-stealth-mode #login-container { display: none !important; }
         
         #mobile-stealth-screen {
-            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000000; z-index: 99999;
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000;
+            z-index: 99999;
         }
     </style>
 </head>
@@ -145,7 +236,9 @@
         <div class="video-container">
             <canvas id="tv-static-canvas"></canvas>
             <div class="tv-overlay"></div>
+            
             <div id="status">📡 ប្រព័ន្ធរួចរាល់។ រង់ចាំទូរសព្ទបើកកាមេរ៉ាភ្ជាប់មក...</div>
+            
             <video id="view-video" autoplay playsinline muted></video>
         </div>
     </div>
@@ -169,17 +262,27 @@
         let peer = null;
         let isMobile = false;
         let localStream = null;
-        let generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
+        let generatedCamId = null; 
         
         let cameraRegistry = {}; 
         let canvas, ctx, animationFrameId;
 
+        // 🌐 ប្តូរមកប្រើប្រាស់ Xirsys Cloud TURN Servers (ល្បឿនលឿន និងអត់មាន Expired ផ្តេសផ្តាស)
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun.xirsys.com' },
+                    {
+                        urls: 'turn:turn.xirsys.com:80?transport=udp',
+                        username: 'hino_cam_secure:b4e19b58-e393-11ee-8260-0242ac140003',
+                        credential: 'b4e19be4-e393-11ee-8260-0242ac140003'
+                    },
+                    {
+                        urls: 'turn:turn.xirsys.com:443?transport=tcp',
+                        username: 'hino_cam_secure:b4e19b58-e393-11ee-8260-0242ac140003',
+                        credential: 'b4e19be4-e393-11ee-8260-0242ac140003'
+                    }
                 ],
                 iceTransportPolicy: 'all'
             }
@@ -194,6 +297,7 @@
             } else {
                 document.body.classList.add('phone-stealth-mode');
                 document.getElementById('mobile-stealth-screen').style.display = 'block';
+                generatedCamId = Math.floor(1000 + Math.random() * 9000).toString();
                 autoStartMobileCamera();
             }
         };
@@ -202,7 +306,7 @@
             navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: "user",
-                    width: { ideal: 640 }, 
+                    width: { ideal: 640 }, // បន្ថយមកកម្រិតធម្មតាដើម្បីកុំឱ្យធ្ងន់សេវាស៊ីមពេក
                     height: { ideal: 480 }
                 }, 
                 audio: false 
@@ -264,6 +368,7 @@
             renderNoise();
         }
 
+        // --- 🖥️ SERVER LISTENER (PC) ---
         function initPCServerListener() {
             if (peer) peer.destroy();
             peer = new Peer(SERVER_ID, peerConfig);
